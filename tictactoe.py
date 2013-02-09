@@ -213,7 +213,7 @@ game = TicTacToeGame(player1, player2, player3, player4)
 while True:
 	game.run()
 
-	prompt = input('Play again? ').lower()
+	prompt = input('Play again (say "yes" for affirmative)? ').lower()
 	if not 'yes'.startswith(prompt):
 		print('Fine. Bye.')
 		break;
