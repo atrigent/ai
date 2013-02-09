@@ -4,7 +4,7 @@ from itertools import *
 import sys
 import re
 import time
-from random import randint, shuffle
+from random import randint, choice, shuffle
 from copy import deepcopy
 from collections import namedtuple
 
@@ -433,7 +433,41 @@ class AutomaticPlayer:
 		print()
 		print()
 
-		x, y = next(game.board.get_valid_moves())
+		node = game.cur_graph
+
+		# The best moves we can make have this score
+		best_score = max(move.scores[game.cur_player] for move in node.moves.values())
+
+		if best_score == 2:
+			print('Ha Ha Ha I can beat you now!')
+			time.sleep(0.5)
+			print()
+
+		# Among the moves that get us that score, what is the best distance to endgame?
+		best_dist = min(move.dist for move in node.moves.values()
+		                          if move.scores[game.cur_player] == best_score)
+
+		best_moves = []
+		for point, move_node in node.moves.items():
+			if move_node.scores[game.cur_player] == best_score and \
+			   move_node.dist == best_dist:
+				best_moves.append(point)
+
+		ex, ey = choice(best_moves)
+		game.graph_board.put(ex, ey, game.cur_player)
+
+		equiv_moves = []
+		for x, y in game.board.get_valid_moves():
+			game.board.put(x, y, game.cur_player)
+
+			if game.board.is_equivalent(game.graph_board):
+				equiv_moves.append((x, y))
+
+			game.board.undo()
+
+		game.graph_board.undo()
+
+		x, y = choice(equiv_moves)
 
 		# Let the exceptions go unhandled - nothing we can really do about them
 		game.do_move(x, y)
