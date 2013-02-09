@@ -23,6 +23,7 @@ class Board:
 
 	def clear(self, data=None):
 		self.board = [[None] * self.dimension for i in range(self.dimension)]
+		self.last_moves = []
 
 	def _print_board_line(self, before, sep, things):
 		if before is None:
@@ -75,14 +76,25 @@ class Board:
 
 		self._print_board_line(None, '+', ('-' * width for width in column_widths))
 
-	def put(self, x, y, val):
+	def _put_val(self, x, y, val):
 		if x >= self.dimension or y >= self.dimension:
 			raise TicTacToeException('Those values are off the board!')
 
+		self.board[x][y] = val
+
+	def put(self, x, y, val):
 		if self.board[x][y] is not None:
 			raise TicTacToeException('This space is already occupied!')
 
-		self.board[x][y] = val
+		self._put_val(x, y, val)
+		self.last_moves.append((x, y))
+
+	def undo(self):
+		if len(self.last_moves) == 0:
+			raise TicTacToeException('No more moves to undo!')
+
+		x, y = self.last_moves.pop()
+		self._put_val(x, y, None)
 
 	def row(self, num):
 		return (self.board[i][num] for i in range(self.dimension))
