@@ -11,7 +11,7 @@ from collections import namedtuple
 class TicTacToeException(Exception):
 	pass
 
-class TicTacToeBoard:
+class Board:
 	def __init__(self, dimension, hpad, vpad):
 		self.dimension = dimension
 
@@ -160,12 +160,12 @@ class TicTacToeBoard:
 
 GraphNode = namedtuple('GraphNode', 'scores dist board moves')
 
-class TicTacToeGame:
+class Game:
 	symbols = ['X', 'O', 'Y', 'Z']
 
 	def _gen_moves_graph(self, board=None, player=0):
 		if board is None:
-			board = TicTacToeBoard(self.board.dimension, 0, 0)
+			board = Board(self.board.dimension, 0, 0)
 
 		moves = board.get_equivalent_moves()
 		players = len(self.players)
@@ -215,7 +215,7 @@ class TicTacToeGame:
 			raise TicTacToeException('Too many players!')
 
 		self.players = players
-		self.board = TicTacToeBoard(dimension, hpad, vpad)
+		self.board = Board(dimension, hpad, vpad)
 
 		self.graph = self._gen_moves_graph()
 
@@ -372,7 +372,7 @@ if __name__ == '__main__':
 	player1 = ManualPlayer()
 	player2 = AutomaticPlayer()
 
-	game = TicTacToeGame(player1, player2)
+	game = Game(player1, player2)
 
 	while True:
 		game.run()
