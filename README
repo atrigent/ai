@@ -4,6 +4,15 @@ to start up because it generates the entire game tree at the beginning. This all
 to be smooth. Theoretically, this code could use more than two players or more than 3x3
 boards. However, memory usage and CPU time limitations make that pretty impractical.
 
+One thing that I added to the minimax algorithm was the concept of "distance" - how many turns
+will be required to reach a state. By including this information, it is possible to prefer
+paths that more quickly result in an endgame. I added this when I observed the AI making
+unintuitive moves when it could always win but when one win state would take more moves
+to get to than the other win state. It should prefer the one with fewer moves (for example,
+if it can win on the next move), but it was sometimes choosing the longer path. While this
+property could be interpreted as being "sadistic" and therefore possibly a desireable trait
+for an adversarial AI to have, I thought that it should try to favor fast games.
+
 This code also implements all of the optimizations having to do with equivalent rotations
 and reflections of the game board. This allows the game tree to be as small as possible. It
 also stops expanding the game tree when a win or tie is encountered.
