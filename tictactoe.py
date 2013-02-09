@@ -281,7 +281,7 @@ class Board:
 
 		return unique_moves
 
-GraphNode = namedtuple('GraphNode', 'scores dist moves')
+TreeNode = namedtuple('TreeNode', 'scores dist moves')
 
 class Game:
 	"""
@@ -290,7 +290,7 @@ class Game:
 
 	symbols = ['X', 'O', 'Y', 'Z']
 
-	def _gen_moves_graph(self, board=None, player=0):
+	def _gen_moves_tree(self, board=None, player=0):
 		if board is None:
 			board = Board(self.board.dimension, 0, 0)
 
@@ -300,40 +300,40 @@ class Game:
 		best_move = None
 		best_move_dist = 0
 
-		graphdict = {}
+		treedict = {}
 		for x, y in moves:
 			board.put(x, y, player)
 
 			subnode = None
 			if self._check_cats_game(board):
 				scores = [1] * players
-				subnode = GraphNode(dist=0,
-				                    scores=scores,
-				                    moves={})
+				subnode = TreeNode(dist=0,
+				                   scores=scores,
+				                   moves={})
 
 			if subnode is None:
 				winner = self._check_win(x, y, board)
 				if winner is not None:
 					scores = [0] * players
 					scores[player] = 2
-					subnode = GraphNode(dist=0,
-					                    scores=scores,
-					                    moves={})
+					subnode = TreeNode(dist=0,
+					                   scores=scores,
+					                   moves={})
 
 			if subnode is None:
-				subnode = self._gen_moves_graph(board, (player + 1) % players)
+				subnode = self._gen_moves_tree(board, (player + 1) % players)
 
 			if best_move is None or best_move[player] < subnode.scores[player]:
 				best_move = subnode.scores
 				best_move_dist = subnode.dist + 1
 
-			graphdict[(x, y)] = subnode
+			treedict[(x, y)] = subnode
 
 			board.undo()
 
-		return GraphNode(dist=best_move_dist,
-		                 scores=best_move,
-		                 moves=graphdict)
+		return TreeNode(dist=best_move_dist,
+		                scores=best_move,
+		                moves=treedict)
 
 	def shuffle_players(self):
 		"""
@@ -348,8 +348,8 @@ class Game:
 		self.players = list(players)
 		self.board = Board(dimension, hpad, vpad)
 
-		self.graph = self._gen_moves_graph()
-		self.graph_board = Board(dimension, 0, 0)
+		self.tree = self._gen_moves_tree()
+		self.tree_board = Board(dimension, 0, 0)
 
 		self._clear_state()
 
@@ -358,8 +358,8 @@ class Game:
 		self.cur_player = None
 		self.last_move = None
 
-		self.cur_graph = self.graph
-		self.graph_board.clear()
+		self.cur_tree = self.tree
+		self.tree_board.clear()
 
 	def run(self):
 		"""
@@ -396,14 +396,14 @@ class Game:
 				print('Looks like nobody can win now - it\'s a tie! \'round these parts, we call that a "cat\'s game".')
 				break
 
-			for (x, y), node in self.cur_graph.moves.items():
-				self.graph_board.put(x, y, self.cur_player)
+			for (x, y), node in self.cur_tree.moves.items():
+				self.tree_board.put(x, y, self.cur_player)
 
-				if self.board.is_equivalent(self.graph_board):
-					self.cur_graph = node
+				if self.board.is_equivalent(self.tree_board):
+					self.cur_tree = node
 					break
 
-				self.graph_board.undo()
+				self.tree_board.undo()
 
 		self._clear_state()
 
@@ -518,7 +518,7 @@ class AutomaticPlayer:
 		print()
 		print()
 
-		node = game.cur_graph
+		node = game.cur_tree
 
 		# The best moves we can make have this score
 		best_score = max(move.scores[game.cur_player] for move in node.moves.values())
@@ -539,18 +539,18 @@ class AutomaticPlayer:
 				best_moves.append(point)
 
 		ex, ey = choice(best_moves)
-		game.graph_board.put(ex, ey, game.cur_player)
+		game.tree_board.put(ex, ey, game.cur_player)
 
 		equiv_moves = []
 		for x, y in game.board.get_valid_moves():
 			game.board.put(x, y, game.cur_player)
 
-			if game.board.is_equivalent(game.graph_board):
+			if game.board.is_equivalent(game.tree_board):
 				equiv_moves.append((x, y))
 
 			game.board.undo()
 
-		game.graph_board.undo()
+		game.tree_board.undo()
 
 		x, y = choice(equiv_moves)
 
