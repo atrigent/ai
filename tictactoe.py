@@ -21,7 +21,7 @@ class Board:
 
 		self.clear()
 
-	def clear(self, data=None):
+	def clear(self):
 		self.board = [[None] * self.dimension for i in range(self.dimension)]
 		self.last_moves = []
 
