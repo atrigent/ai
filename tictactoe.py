@@ -270,16 +270,16 @@ class Board:
 		of the moves returned by get_valid_moves.
 		"""
 		possible_moves = self.get_valid_moves()
-		equivalent_moves = []
+		unique_moves = []
 
 		for px, py in possible_moves:
-			for ex, ey in equivalent_moves:
+			for ex, ey in unique_moves:
 				if self.moves_equal((px, py), (ex, ey)):
 					break
 			else:
-				equivalent_moves.append((px, py))
+				unique_moves.append((px, py))
 
-		return equivalent_moves
+		return unique_moves
 
 GraphNode = namedtuple('GraphNode', 'scores dist moves')
 
