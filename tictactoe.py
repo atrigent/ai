@@ -6,6 +6,7 @@ import re
 import time
 from random import randint
 from copy import deepcopy
+from collections import namedtuple
 
 class TicTacToeException(Exception):
 	pass
@@ -157,8 +158,57 @@ class TicTacToeBoard:
 
 		return equivalent_moves
 
+GraphNode = namedtuple('GraphNode', 'scores dist board moves')
+
 class TicTacToeGame:
 	symbols = ['X', 'O', 'Y', 'Z']
+
+	def _gen_moves_graph(self, board=None, player=0):
+		if board is None:
+			board = TicTacToeBoard(self.board.dimension, 0, 0)
+
+		moves = board.get_equivalent_moves()
+		players = len(self.players)
+
+		best_move = None
+		best_move_dist = 0
+
+		graphdict = {}
+		for x, y in moves:
+			dup = deepcopy(board)
+			dup.put(x, y, player)
+
+			subnode = None
+			if self._check_cats_game(dup):
+				scores = [1] * players
+				subnode = GraphNode(dist=0,
+				                    scores=scores,
+				                    board=dup,
+				                    moves={})
+
+			if subnode is None:
+				winner = self._check_win(x, y, dup)
+				if winner is not None:
+					scores = [0] * players
+					scores[player] = 2
+					subnode = GraphNode(dist=0,
+					                    scores=scores,
+					                    board=dup,
+					                    moves={})
+
+			if subnode is None:
+				subnode = self._gen_moves_graph(dup, (player + 1) % players)
+
+			if best_move is None or best_move[player] < subnode.scores[player]:
+				best_move = subnode.scores
+				best_move_dist = subnode.dist + 1
+
+			graphdict[(x, y)] = subnode
+
+		return GraphNode(dist=best_move_dist,
+		                 scores=best_move,
+		                 board=board,
+		                 moves=graphdict)
 
 	def __init__(self, *players, dimension=3, hpad=2, vpad=1):
 		if len(players) > len(self.symbols):
@@ -167,12 +217,15 @@ class TicTacToeGame:
 		self.players = players
 		self.board = TicTacToeBoard(dimension, hpad, vpad)
 
+		self.graph = self._gen_moves_graph()
+
 		self._clear_state()
 
 	def _clear_state(self):
 		self.board.clear()
 		self.cur_player = None
 		self.last_move = None
+		self.cur_graph = self.graph
 
 	def run(self):
 		print('The initial state of the board is:')
@@ -205,6 +258,11 @@ class TicTacToeGame:
 			if self._check_cats_game():
 				print('Looks like nobody can win now - it\'s a tie! \'round these parts, we call that a "cat\'s game".')
 				break
+
+			for point, node in self.cur_graph.moves.items():
+				if self.board.is_equivalent(node.board):
+					self.cur_graph = node
+					break
 
 		self._clear_state()
 
