@@ -170,7 +170,7 @@ class Board:
 
 		return equivalent_moves
 
-GraphNode = namedtuple('GraphNode', 'scores dist board moves')
+GraphNode = namedtuple('GraphNode', 'scores dist moves')
 
 class Game:
 	symbols = ['X', 'O', 'Y', 'Z']
@@ -187,29 +187,26 @@ class Game:
 
 		graphdict = {}
 		for x, y in moves:
-			dup = deepcopy(board)
-			dup.put(x, y, player)
+			board.put(x, y, player)
 
 			subnode = None
-			if self._check_cats_game(dup):
+			if self._check_cats_game(board):
 				scores = [1] * players
 				subnode = GraphNode(dist=0,
 				                    scores=scores,
-				                    board=dup,
 				                    moves={})
 
 			if subnode is None:
-				winner = self._check_win(x, y, dup)
+				winner = self._check_win(x, y, board)
 				if winner is not None:
 					scores = [0] * players
 					scores[player] = 2
 					subnode = GraphNode(dist=0,
 					                    scores=scores,
-					                    board=dup,
 					                    moves={})
 
 			if subnode is None:
-				subnode = self._gen_moves_graph(dup, (player + 1) % players)
+				subnode = self._gen_moves_graph(board, (player + 1) % players)
 
 			if best_move is None or best_move[player] < subnode.scores[player]:
 				best_move = subnode.scores
@@ -217,9 +214,10 @@ class Game:
 
 			graphdict[(x, y)] = subnode
 
+			board.undo()
+
 		return GraphNode(dist=best_move_dist,
 		                 scores=best_move,
-		                 board=board,
 		                 moves=graphdict)
 
 	def shuffle_players(self):
@@ -233,6 +231,7 @@ class Game:
 		self.board = Board(dimension, hpad, vpad)
 
 		self.graph = self._gen_moves_graph()
+		self.graph_board = Board(dimension, 0, 0)
 
 		self._clear_state()
 
@@ -240,7 +239,9 @@ class Game:
 		self.board.clear()
 		self.cur_player = None
 		self.last_move = None
+
 		self.cur_graph = self.graph
+		self.graph_board.clear()
 
 	def run(self):
 		print('The initial state of the board is:')
@@ -274,10 +275,14 @@ class Game:
 				print('Looks like nobody can win now - it\'s a tie! \'round these parts, we call that a "cat\'s game".')
 				break
 
-			for point, node in self.cur_graph.moves.items():
-				if self.board.is_equivalent(node.board):
+			for (x, y), node in self.cur_graph.moves.items():
+				self.graph_board.put(x, y, self.cur_player)
+
+				if self.board.is_equivalent(self.graph_board):
 					self.cur_graph = node
 					break
+
+				self.graph_board.undo()
 
 		self._clear_state()
 
