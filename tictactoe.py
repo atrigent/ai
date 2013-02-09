@@ -6,26 +6,24 @@ import re
 import time
 from random import randint
 
-class TicTacToeGame:
-	symbols = ['X', 'O', 'Y', 'Z']
+class TicTacToeException(Exception):
+	pass
 
-	def __init__(self, *players, dimension=3, hpad=2, vpad=1):
-		if len(players) > len(self.symbols):
-			raise Exception('Too many players!')
-
-		self.players = players
+class TicTacToeBoard:
+	def __init__(self, dimension, hpad, vpad, data=None):
 		self.dimension = dimension
 
 		self.hpad = hpad
 		self.vpad = vpad
 		self.pre_width = self._min_width(self.dimension)
 
-		self._clear_state()
+		self.clear(data)
 
-	def _clear_state(self):
-		self.board = [[None] * self.dimension for i in range(self.dimension)]
-		self.cur_player = None
-		self.last_move = None
+	def clear(self, data=None):
+		if data is None:
+			self.board = [[None] * self.dimension for i in range(self.dimension)]
+		else:
+			self.board = data
 
 	def _print_board_line(self, before, sep, things):
 		if before is None:
@@ -56,14 +54,14 @@ class TicTacToeGame:
 		self._print_board_line(before, sep, self._things(things, widths));
 		pad()
 
-	def _print_board(self):
+	def print(self, symbols):
 		def objs_to_symbols(players):
-			return (self.symbols[player] for player in players if player is not None)
+			return (symbols[player] for player in players if player is not None)
 
 		def places_to_symbols(places):
 			for place in places:
 				if place is not None:
-					yield self.symbols[place]
+					yield symbols[place]
 				else:
 					yield place
 
@@ -78,9 +76,72 @@ class TicTacToeGame:
 
 		self._print_board_line(None, '+', ('-' * width for width in column_widths))
 
+	def put(self, x, y, val):
+		if x >= self.dimension or y >= self.dimension:
+			raise TicTacToeException('Those values are off the board!')
+
+		if self.board[x][y] is not None:
+			raise TicTacToeException('This space is already occupied!')
+
+		self.board[x][y] = val
+
+	def row(self, num):
+		return (self.board[i][num] for i in range(self.dimension))
+
+	def col(self, num):
+		return self.board[num]
+
+	def _diag(self, a=1, b=0):
+		return (self.board[i][a*i + b] for i in range(self.dimension))
+
+	def main_diag(self):
+		return self._diag()
+
+	def anti_diag(self):
+		return self._diag(-1, -1)
+
+	def get_valid_moves(self):
+		return ((x, y) for x in range(self.dimension)
+		               for y in range(self.dimension)
+		               if self.board[x][y] is None)
+
+	def rotate_board(self, board):
+		pass
+
+	def get_equivalent_moves(self):
+		possible_moves = self.get_valid_moves()
+		equivalent_moves = []
+
+		for px, py in possible_moves:
+			pboard = self.get_scratch_board()
+			self.do_move(px, py, pboard)
+
+			for ex, ey in equivalent_moves:
+				pass
+
+	def get_scratch_board(self):
+		return [[elem for elem in col] for col in self.board]
+
+class TicTacToeGame:
+	symbols = ['X', 'O', 'Y', 'Z']
+
+	def __init__(self, *players, dimension=3, hpad=2, vpad=1):
+		if len(players) > len(self.symbols):
+			raise TicTacToeException('Too many players!')
+
+		self.players = players
+		self.board = TicTacToeBoard(dimension, hpad, vpad)
+
+		self._clear_state()
+
+	def _clear_state(self):
+		self.board.clear()
+		self.cur_player = None
+		self.last_move = None
+
 	def run(self):
 		print('The initial state of the board is:')
-		self._print_board()
+		self.board.print(self.symbols)
 		print()
 
 		for i in cycle(range(len(self.players))):
@@ -91,13 +152,13 @@ class TicTacToeGame:
 			self.players[i].get_move(self)
 
 			if self.last_move is None:
-				raise Exception('No move was made???')
+				raise TicTacToeException('No move was made???')
 
 			x, y = self.last_move
 			self.last_move = None
 
 			print('The state of the board is:')
-			self._print_board()
+			self.board.print(self.symbols)
 			print()
 
 			winner = self._check_win(x, y)
@@ -120,9 +181,9 @@ class TicTacToeGame:
 
 	def _check_cats_game(self):
 		all_seqs = chain(
-			(self._row(i) for i in range(self.dimension)),
-			(self._col(i) for i in range(self.dimension)),
-			[self._tl_br_diag(), self._bl_tr_diag()]
+			(self.board.row(i) for i in range(self.board.dimension)),
+			(self.board.col(i) for i in range(self.board.dimension)),
+			[self.board.main_diag(), self.board.anti_diag()]
 		)
 
 		return all(self._check_cats_game_sequence(seq) for seq in all_seqs)
@@ -135,31 +196,16 @@ class TicTacToeGame:
 		else:
 			return grouped[0]
 
-	def _row(self, num):
-		return (self.board[i][num] for i in range(self.dimension))
-
-	def _col(self, num):
-		return self.board[num]
-
-	def _diag(self, a=1, b=0):
-		return (self.board[i][a*i + b] for i in range(self.dimension))
-
-	def _tl_br_diag(self):
-		return self._diag()
-
-	def _bl_tr_diag(self):
-		return self._diag(-1, -1)
-
 	def _check_win(self, x, y):
-		to_check = [self._col(x), self._row(y)]
+		to_check = [self.board.col(x), self.board.row(y)]
 
 		# main diagonal
 		if x == y:
-			to_check += [self._tl_br_diag()]
+			to_check += [self.board.main_diag()]
 
 		# anti-diagonal
-		if x == (self.dimension - 1) - y:
-			to_check += [self._bl_tr_diag()]
+		if x == (self.board.dimension - 1) - y:
+			to_check += [self.board.anti_diag()]
 
 		for sequence in to_check:
 			player = self._check_win_sequence(sequence)
@@ -169,28 +215,12 @@ class TicTacToeGame:
 
 		return None
 
-	def get_valid_moves(self):
-		return ((x, y) for x in range(self.dimension)
-		               for y in range(self.dimension)
-		               if self.board[x][y] is None)
-
-	def do_move(self, x, y, board=None):
-		if x >= self.dimension or y >= self.dimension:
-			raise Exception('Those values are off the board!')
-
+	def do_move(self, x, y):
 		if self.last_move is not None:
-			raise Exception('Come on man, you obviously can\'t go twice...')
+			raise TicTacToeException('Come on man, you obviously can\'t go twice...')
 
-		if board is None:
-			board = self.board
-
-		if board[x][y] is not None:
-			raise Exception('This space is already occupied!')
-
-		board[x][y] = self.cur_player
-
-		if board is self.board:
-			self.last_move = x, y
+		self.board.put(x, y, self.cur_player)
+		self.last_move = x, y
 
 class ManualPlayer:
 	def __init__(self):
@@ -213,7 +243,7 @@ class ManualPlayer:
 
 			try:
 				game.do_move(x - 1, y - 1)
-			except Exception as e:
+			except TicTacToeException as e:
 				print(e.args[0])
 				continue
 			else:
@@ -234,7 +264,7 @@ class AutomaticPlayer:
 		print()
 		print()
 
-		x, y = next(game.get_valid_moves())
+		x, y = next(game.board.get_valid_moves())
 
 		# Let the exceptions go unhandled - nothing we can really do about them
 		game.do_move(x, y)
