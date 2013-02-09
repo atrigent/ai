@@ -41,9 +41,7 @@ class Board:
 		print(before + sep + sep.join(things) + sep)
 
 	def _things(self, things, widths):
-		for i, val in enumerate(things):
-			width = widths[i]
-
+		for val, width in zip(things, widths):
 			if val is None:
 				yield ' ' * width
 			else:
