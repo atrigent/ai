@@ -129,6 +129,62 @@ class Board:
 		return (self.dimension == other.dimension and
 		        self.board == other.board)
 
+	def _get_with_move_and_transform(self, point, move, move_val,
+	                                       x_trans=lambda x, y: x,
+	                                       y_trans=lambda x, y: y):
+		x, y = point
+
+		# First, transform get coords to real coordinates
+		real_x = x_trans(x, y)
+		real_y = y_trans(x, y)
+
+		if move is not None and (real_x, real_y) == move:
+			if self.board[real_x][real_y] is not None:
+				raise TicTacToeException('Can not move there!')
+
+			return move_val
+		else:
+			return self.board[real_x][real_y]
+
+	def _moves_equal_with_transform(self, move,
+	                                trans_move,
+	                                x_trans, y_trans):
+		for x in range(self.dimension):
+			for y in range(self.dimension):
+				if self._get_with_move_and_transform((x, y), move, -1) != \
+				   self._get_with_move_and_transform((x, y), trans_move, -1, x_trans, y_trans):
+					return False
+
+		return True
+
+	def _moves_equal_with_rotations(self, move1, move2, x_trans=(1, 0)):
+		x_coeff, x_add = x_trans
+
+		x_lambdas = [
+			lambda x, y: x_coeff * x + x_add,
+			lambda x, y: x_coeff * (self.dimension - y - 1) + x_add,
+			lambda x, y: x_coeff * (self.dimension - x - 1) + x_add,
+			lambda x, y: x_coeff * y + x_add,
+		]
+
+		y_lambdas = [
+			lambda x, y: y,
+			lambda x, y: x,
+			lambda x, y: self.dimension - y - 1,
+			lambda x, y: self.dimension - x - 1
+		]
+
+		for lx, ly in zip(x_lambdas, y_lambdas):
+			if self._moves_equal_with_transform(move1, move2,
+			                                    lx, ly):
+				return True
+
+		return False
+
+	def moves_equal(self, move1, move2):
+		return self._moves_equal_with_rotations(move1, move2) or \
+		       self._moves_equal_with_rotations(move1, move2, (-1, self.dimension - 1))
+
 	def is_equivalent(self, other):
 		result = False
 
@@ -156,19 +212,10 @@ class Board:
 		equivalent_moves = []
 
 		for px, py in possible_moves:
-			pboard = deepcopy(self)
-			pboard.put(px, py, -1)
-
-			already_there = False
 			for ex, ey in equivalent_moves:
-				eboard = deepcopy(self)
-				eboard.put(ex, ey, -1)
-
-				if pboard.is_equivalent(eboard):
-					already_there = True
+				if self.moves_equal((px, py), (ex, ey)):
 					break
-
-			if not already_there:
+			else:
 				equivalent_moves.append((px, py))
 
 		return equivalent_moves
