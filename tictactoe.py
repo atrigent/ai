@@ -22,6 +22,8 @@ class TicTacToeGame:
 
 	def _clear_state(self):
 		self.board = [[None] * self.dimension for i in range(self.dimension)]
+		self.cur_player = None
+		self.last_move = None
 
 	def _print_board_line(self, before, sep, things):
 		if before is None:
@@ -80,25 +82,17 @@ class TicTacToeGame:
 		print()
 
 		for i in cycle(range(len(self.players))):
+			self.cur_player = i
 			print('It is {0}\'s turn!'.format(self.symbols[i]))
 			print()
 
-			player = self.players[i]
+			self.players[i].get_move(self)
 
-			while True:
-				x, y = player.get_move(self)
+			if self.last_move is None:
+				raise Exception('No move was made???')
 
-				if x >= self.dimension or y >= self.dimension:
-					player.off_the_board()
-					continue
-
-				if self.board[x][y] is not None:
-					player.already_occupied()
-					continue
-
-				break
-
-			self.board[x][y] = i
+			x, y = self.last_move
+			self.last_move = None
 
 			print()
 			print('The state of the board is:')
@@ -173,15 +167,27 @@ class TicTacToeGame:
 
 		return None
 
+	def do_move(self, x, y, board=None):
+		if x >= self.dimension or y >= self.dimension:
+			raise Exception('Those values are off the board!')
+
+		if self.last_move is not None:
+			raise Exception('Come on man, you obviously can\'t go twice...')
+
+		if board is None:
+			board = self.board
+
+		if board[x][y] is not None:
+			raise Exception('This space is already occupied!')
+
+		board[x][y] = self.cur_player
+
+		if board is self.board:
+			self.last_move = x, y
+
 class ManualPlayer:
 	def __init__(self):
 		self.input_re = re.compile('^[^\d]*(\d+)[^\d]+(\d+)[^\d]*$')
-
-	def off_the_board(self):
-		print('Those values are off the board!')
-
-	def already_occupied(self):
-		print('This space is already occupied!')
 
 	def get_move(self, game):
 		while True:
@@ -198,9 +204,13 @@ class ManualPlayer:
 				print('Both values must be more than 0!')
 				continue
 
-			break
-
-		return x - 1, y - 1
+			try:
+				game.do_move(x - 1, y - 1)
+			except Exception as e:
+				print(e.args[0])
+				continue
+			else:
+				break
 
 player1 = ManualPlayer()
 player2 = ManualPlayer()
