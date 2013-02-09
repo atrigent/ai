@@ -31,7 +31,7 @@ class TicTacToeGame:
 		print(before + sep + sep.join(things) + sep)
 
 	def _things(self, things, widths):
-		for (i, val) in enumerate(things):
+		for i, val in enumerate(things):
 			width = widths[i]
 
 			if val is None:
@@ -63,7 +63,7 @@ class TicTacToeGame:
 					yield place
 
 		column_widths = [max(self._min_width(val) for val in chain(objs_to_symbols(column), [i]))
-		                 for (i, column) in enumerate(self.board, 1)]
+		                 for i, column in enumerate(self.board, 1)]
 
 		self._print_board_row(None, ' ', range(1, self.dimension+1), column_widths)
 
