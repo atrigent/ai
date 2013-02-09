@@ -368,7 +368,7 @@ class AutomaticPlayer:
 		# Let the exceptions go unhandled - nothing we can really do about them
 		game.do_move(x, y)
 
-if __name__ == '__main__':
+def main():
 	player1 = ManualPlayer()
 	player2 = AutomaticPlayer()
 
@@ -383,3 +383,6 @@ if __name__ == '__main__':
 			break;
 
 		print()
+
+if __name__ == '__main__':
+	main()
