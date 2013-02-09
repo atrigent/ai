@@ -275,17 +275,18 @@ class AutomaticPlayer:
 		# Let the exceptions go unhandled - nothing we can really do about them
 		game.do_move(x, y)
 
-player1 = ManualPlayer()
-player2 = AutomaticPlayer()
+if __name__ == '__main__':
+	player1 = ManualPlayer()
+	player2 = AutomaticPlayer()
 
-game = TicTacToeGame(player1, player2)
+	game = TicTacToeGame(player1, player2)
 
-while True:
-	game.run()
+	while True:
+		game.run()
 
-	prompt = input('Play again (say "yes" for affirmative)? ').lower()
-	if not 'yes'.startswith(prompt):
-		print('Fine. Bye.')
-		break;
+		prompt = input('Play again (say "yes" for affirmative)? ').lower()
+		if not 'yes'.startswith(prompt):
+			print('Fine. Bye.')
+			break;
 
-	print()
+		print()
