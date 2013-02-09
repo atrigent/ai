@@ -4,7 +4,7 @@ from itertools import *
 import sys
 import re
 import time
-from random import randint
+from random import randint, shuffle
 from copy import deepcopy
 from collections import namedtuple
 
@@ -222,11 +222,14 @@ class Game:
 		                 board=board,
 		                 moves=graphdict)
 
+	def shuffle_players(self):
+		shuffle(self.players)
+
 	def __init__(self, *players, dimension=3, hpad=2, vpad=1):
 		if len(players) > len(self.symbols):
 			raise TicTacToeException('Too many players!')
 
-		self.players = players
+		self.players = list(players)
 		self.board = Board(dimension, hpad, vpad)
 
 		self.graph = self._gen_moves_graph()
@@ -387,6 +390,7 @@ def main():
 	game = Game(player1, player2)
 
 	while True:
+		game.shuffle_players()
 		game.run()
 
 		prompt = input('Play again (say "yes" for affirmative)? ').lower()
