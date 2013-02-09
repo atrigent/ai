@@ -116,13 +116,13 @@ class Board:
 
 	def row(self, num):
 		"""
-		Get a row from the board as a list.
+		Get a row from the board as an iterable.
 		"""
 		return (self.board[i][num] for i in range(self.dimension))
 
 	def col(self, num):
 		"""
-		Get a column from the board as a list.
+		Get a column from the board as an iterable.
 		"""
 		return self.board[num]
 
@@ -132,14 +132,14 @@ class Board:
 	def main_diag(self):
 		"""
 		Get the main diagonal (from top left to bottom right)
-		as a list.
+		as an iterable.
 		"""
 		return self._diag()
 
 	def anti_diag(self):
 		"""
 		Get the anti-diagonal (from bottom left to top right)
-		as a list.
+		as an iterable.
 		"""
 		return self._diag(-1, -1)
 
@@ -153,7 +153,7 @@ class Board:
 
 	def rotate(self):
 		"""
-		Rotate the board counter-clockwise, the equivalent of 90 degrees.
+		Rotate the board clockwise, the equivalent of 90 degrees.
 		In other words, the top left position is now the top right position.
 		"""
 		self.board = [list(self.row(self.dimension - i - 1)) for i in range(self.dimension)]
