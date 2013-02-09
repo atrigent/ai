@@ -179,9 +179,14 @@ class Board:
 	def _get_with_move_and_transform(self, point, move, move_val,
 	                                       x_trans=lambda x, y: x,
 	                                       y_trans=lambda x, y: y):
+		# In calling this function, we are essentially asking:
+		# if I take the current board, transform our "view" of it
+		# (i.e, the opposite of transforming the board itself),
+		# and make a move at the specified location, what will
+		# the value at the specified point be?
 		x, y = point
 
-		# First, transform get coords to real coordinates
+		# This transforms the view
 		real_x = x_trans(x, y)
 		real_y = y_trans(x, y)
 
@@ -189,6 +194,9 @@ class Board:
 			if self.board[real_x][real_y] is not None:
 				raise TicTacToeException('Can not move there!')
 
+			# If we want to get the value at the location
+			# that we are pretending to make a move, return
+			# the pretend move value
 			return move_val
 		else:
 			return self.board[real_x][real_y]
@@ -196,6 +204,9 @@ class Board:
 	def _moves_equal_with_transform(self, move,
 	                                trans_move,
 	                                x_trans, y_trans):
+		# Check whether every square of this board with the given move made
+		# is the same as every square of this board with the OTHER given move
+		# made and with an additional transformation applied to it.
 		for x in range(self.dimension):
 			for y in range(self.dimension):
 				if self._get_with_move_and_transform((x, y), move, -1) != \
@@ -207,20 +218,36 @@ class Board:
 	def _moves_equal_with_rotations(self, move1, move2, x_trans=(1, 0)):
 		x_coeff, x_add = x_trans
 
+		# These functions are mappings that need to be applied to x
+		# in order to apply rotation transformations. The x_coeff
+		# and x_adds are to support an addition horizontal reflection.
 		x_lambdas = [
+			# identity rotation (0 degrees)
 			lambda x, y: x_coeff * x + x_add,
+			# first rotation (90 degrees)
 			lambda x, y: x_coeff * (self.dimension - y - 1) + x_add,
+			# second rotation (180 degrees)
 			lambda x, y: x_coeff * (self.dimension - x - 1) + x_add,
+			# third rotation (270 degrees)
 			lambda x, y: x_coeff * y + x_add,
 		]
 
+		# These functions are mappings that need to be applied to y
+		# in order to apply rotations transformations.
 		y_lambdas = [
+			# identity rotation (0 degrees)
 			lambda x, y: y,
+			# first rotation (90 degrees)
 			lambda x, y: x,
+			# second rotation (180 degrees)
 			lambda x, y: self.dimension - y - 1,
+			# third rotation (270 degrees)
 			lambda x, y: self.dimension - x - 1
 		]
 
+		# Check whether the board with the first move made is the same
+		# as the board with the second move made plus any of the four
+		# rotation transformations.
 		for lx, ly in zip(x_lambdas, y_lambdas):
 			if self._moves_equal_with_transform(move1, move2,
 			                                    lx, ly):
@@ -234,6 +261,8 @@ class Board:
 		respect to this board, taking into account reflection and
 		rotation equivalencies.
 		"""
+
+		# Check all of the rotations with and without a horizontal reflection
 		return self._moves_equal_with_rotations(move1, move2) or \
 		       self._moves_equal_with_rotations(move1, move2, (-1, self.dimension - 1))
 
@@ -301,10 +330,15 @@ class Game:
 		best_move_dist = 0
 
 		treedict = {}
+		# For each unique move...
 		for x, y in moves:
 			board.put(x, y, player)
 
 			subnode = None
+
+			# Generate a cat's game node, if necessary.
+			# In a cat's game, all players will have
+			# a score of 1
 			if self._check_cats_game(board):
 				scores = [1] * players
 				subnode = TreeNode(dist=0,
@@ -312,6 +346,9 @@ class Game:
 				                   moves={})
 
 			if subnode is None:
+				# Generate a win game node, if necessary.
+				# In a winning state, the winner has score
+				# 2 and every other player has score 0.
 				winner = self._check_win(x, y, board)
 				if winner is not None:
 					scores = [0] * players
@@ -321,8 +358,13 @@ class Game:
 					                   moves={})
 
 			if subnode is None:
+				# Otherwise, expand this node further.
 				subnode = self._gen_moves_tree(board, (player + 1) % players)
 
+			# Keep track of what the best move would be for the
+			# current player, and use that as the score for the
+			# node currently being expanded. This is the core idea
+			# behind the minimax algorithm.
 			if best_move is None or best_move[player] < subnode.scores[player]:
 				best_move = subnode.scores
 				best_move_dist = subnode.dist + 1
@@ -396,6 +438,7 @@ class Game:
 				print('Looks like nobody can win now - it\'s a tie! \'round these parts, we call that a "cat\'s game".')
 				break
 
+			# Traverse the game tree - figure out which path we just took
 			for (x, y), node in self.cur_tree.moves.items():
 				self.tree_board.put(x, y, self.cur_player)
 
@@ -510,6 +553,7 @@ class AutomaticPlayer:
 		self.noises = noises
 
 	def get_move(self, game):
+		# Generate some computer noises :)
 		for noise in islice(cycle(self.noises), randint(3, 6)):
 			sys.stdout.write(noise + '... ')
 			sys.stdout.flush()
@@ -532,13 +576,17 @@ class AutomaticPlayer:
 		best_dist = min(move.dist for move in node.moves.values()
 		                          if move.scores[game.cur_player] == best_score)
 
+		# Collect the moves that have the properties determined above
 		best_moves = []
 		for point, move_node in node.moves.items():
 			if move_node.scores[game.cur_player] == best_score and \
 			   move_node.dist == best_dist:
 				best_moves.append(point)
 
+		# Choose one of these moves randomly
 		ex, ey = choice(best_moves)
+
+		# Figure out the equivalent moves that the chosen move maps to
 		game.tree_board.put(ex, ey, game.cur_player)
 
 		equiv_moves = []
@@ -552,6 +600,7 @@ class AutomaticPlayer:
 
 		game.tree_board.undo()
 
+		# Choose randomly from these equivalent moves
 		x, y = choice(equiv_moves)
 
 		# Let the exceptions go unhandled - nothing we can really do about them
