@@ -239,11 +239,9 @@ class AutomaticPlayer:
 		game.do_move(x, y)
 
 player1 = ManualPlayer()
-player2 = ManualPlayer()
-player3 = ManualPlayer()
-player4 = ManualPlayer()
+player2 = AutomaticPlayer()
 
-game = TicTacToeGame(player1, player2, player3, player4)
+game = TicTacToeGame(player1, player2)
 
 while True:
 	game.run()
