@@ -367,13 +367,13 @@ class Game:
 			# behind the minimax algorithm.
 			if best_move is None or best_move[player] < subnode.scores[player]:
 				best_move = subnode.scores
-				best_move_dist = subnode.dist + 1
+				best_move_dist = subnode.dist
 
 			treedict[(x, y)] = subnode
 
 			board.undo()
 
-		return TreeNode(dist=best_move_dist,
+		return TreeNode(dist=best_move_dist + 1,
 		                scores=best_move,
 		                moves=treedict)
 
