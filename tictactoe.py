@@ -265,7 +265,7 @@ class Board:
 
 		return result
 
-	def get_equivalent_moves(self):
+	def get_unique_moves(self):
 		"""
 		Get a list of of unique moves, taking into account
 		rotations and reflections. This will be a subset
@@ -292,7 +292,7 @@ class Game:
 		if board is None:
 			board = Board(self.board.dimension, 0, 0)
 
-		moves = board.get_equivalent_moves()
+		moves = board.get_unique_moves()
 		players = len(self.players)
 
 		best_move = None
