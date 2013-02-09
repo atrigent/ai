@@ -5,6 +5,7 @@ import sys
 import re
 import time
 from random import randint
+from copy import deepcopy
 
 class TicTacToeException(Exception):
 	pass
@@ -102,22 +103,59 @@ class TicTacToeBoard:
 		               for y in range(self.dimension)
 		               if self.board[x][y] is None)
 
-	def rotate_board(self, board):
-		pass
+	def rotate(self):
+		self.board = [list(self.row(self.dimension - i - 1)) for i in range(self.dimension)]
+
+	def reflect_horiz(self):
+		self.board.reverse()
+
+	def reflect_vert(self):
+		self.board = [col.reverse() for col in self.board]
+
+	def __eq__(self, other):
+		return (self.dimension == other.dimension and
+		        self.board == other.board)
+
+	def is_equivalent(self, other):
+		for i in range(4):
+			if self == other:
+				return True
+
+			other.rotate()
+
+		other.reflect_horiz()
+
+		for i in range(4):
+			if self == other:
+				return True
+
+			other.rotate()
+
+		other.reflect_horiz()
+
+		return False
 
 	def get_equivalent_moves(self):
 		possible_moves = self.get_valid_moves()
 		equivalent_moves = []
 
 		for px, py in possible_moves:
-			pboard = self.get_scratch_board()
-			self.do_move(px, py, pboard)
+			pboard = deepcopy(self)
+			pboard.put(px, py, -1)
 
+			already_there = False
 			for ex, ey in equivalent_moves:
-				pass
+				eboard = deepcopy(self)
+				eboard.put(ex, ey, -1)
 
-	def get_scratch_board(self):
-		return [[elem for elem in col] for col in self.board]
+				if pboard.is_equivalent(eboard):
+					already_there = True
+					break
+
+			if not already_there:
+				equivalent_moves.append((px, py))
+
+		return equivalent_moves
 
 class TicTacToeGame:
 	symbols = ['X', 'O', 'Y', 'Z']
