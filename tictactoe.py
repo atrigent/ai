@@ -365,7 +365,9 @@ class Game:
 			# current player, and use that as the score for the
 			# node currently being expanded. This is the core idea
 			# behind the minimax algorithm.
-			if best_move is None or best_move[player] < subnode.scores[player]:
+			if best_move is None or best_move[player] < subnode.scores[player] or \
+			   (best_move[player] == subnode.scores[player] and
+			    best_move_dist < subnode.dist):
 				best_move = subnode.scores
 				best_move_dist = subnode.dist
 
