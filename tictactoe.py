@@ -102,7 +102,7 @@ class TicTacToeGame:
 			winner = self._check_win(x, y)
 
 			if winner is not None:
-				print('We have a winner! It is you, {0}!'.format(self.symbols[winner]))
+				print('We have a winner! It is {0}! Congratulations!'.format(self.symbols[winner]))
 				break
 
 			if self._check_cats_game():
