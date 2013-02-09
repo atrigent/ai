@@ -3,6 +3,8 @@
 from itertools import *
 import sys
 import re
+import time
+from random import randint
 
 class TicTacToeGame:
 	symbols = ['X', 'O', 'Y', 'Z']
@@ -168,6 +170,11 @@ class TicTacToeGame:
 
 		return None
 
+	def get_valid_moves(self):
+		return ((x, y) for x in range(self.dimension)
+		               for y in range(self.dimension)
+		               if self.board[x][y] is None)
+
 	def do_move(self, x, y, board=None):
 		if x >= self.dimension or y >= self.dimension:
 			raise Exception('Those values are off the board!')
@@ -212,6 +219,24 @@ class ManualPlayer:
 				continue
 			else:
 				break
+
+class AutomaticPlayer:
+	def __init__(self, noises=['Beep', 'Boop']):
+		self.noises = noises
+
+	def get_move(self, game):
+		for noise in islice(cycle(self.noises), randint(5, 15)):
+			sys.stdout.write(noise + '... ')
+			sys.stdout.flush()
+			time.sleep(0.2)
+
+		print()
+		print()
+
+		x, y = next(game.get_valid_moves())
+
+		# Let the exceptions go unhandled - nothing we can really do about them
+		game.do_move(x, y)
 
 player1 = ManualPlayer()
 player2 = ManualPlayer()
