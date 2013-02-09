@@ -1,0 +1,16 @@
+My tic-tac-toe game uses the minimax algorithm. It is capable of using the multiplayer
+formulation described in the textbook, with a vector of utilities at each node. It is slow
+to start up because it generates the entire game tree at the beginning. This allows gameplay
+to be smooth. Theoretically, this code could use more than two players or more than 3x3
+boards. However, memory usage and CPU time limitations make that pretty impractical.
+
+This code also implements all of the optimizations having to do with equivalent rotations
+and reflections of the game board. This allows the game tree to be as small as possible. It
+also stops expanding the game tree when a win or tie is encountered.
+
+Gameplay is simple - just enter your move by entering the coordinates. The game will figure
+it out, as long as there are two numbers in your input somewhere.
+
+As a bonus, you can also play this game by sshing to tictactoe@67.189.145.86, password threeinarow.
+
+:)
