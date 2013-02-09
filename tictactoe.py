@@ -96,7 +96,6 @@ class TicTacToeGame:
 			x, y = self.last_move
 			self.last_move = None
 
-			print()
 			print('The state of the board is:')
 			self._print_board()
 			print()
@@ -219,6 +218,8 @@ class ManualPlayer:
 				continue
 			else:
 				break
+
+		print()
 
 class AutomaticPlayer:
 	def __init__(self, noises=['Beep', 'Boop']):
