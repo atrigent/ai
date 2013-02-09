@@ -179,11 +179,14 @@ class TicTacToeGame:
 
 		return len(grouped) > 1
 
-	def _check_cats_game(self):
+	def _check_cats_game(self, board=None):
+		if board is None:
+			board = self.board
+
 		all_seqs = chain(
-			(self.board.row(i) for i in range(self.board.dimension)),
-			(self.board.col(i) for i in range(self.board.dimension)),
-			[self.board.main_diag(), self.board.anti_diag()]
+			(board.row(i) for i in range(board.dimension)),
+			(board.col(i) for i in range(board.dimension)),
+			[board.main_diag(), board.anti_diag()]
 		)
 
 		return all(self._check_cats_game_sequence(seq) for seq in all_seqs)
@@ -196,16 +199,19 @@ class TicTacToeGame:
 		else:
 			return grouped[0]
 
-	def _check_win(self, x, y):
-		to_check = [self.board.col(x), self.board.row(y)]
+	def _check_win(self, x, y, board=None):
+		if board is None:
+			board = self.board
+
+		to_check = [board.col(x), board.row(y)]
 
 		# main diagonal
 		if x == y:
-			to_check += [self.board.main_diag()]
+			to_check += [board.main_diag()]
 
 		# anti-diagonal
-		if x == (self.board.dimension - 1) - y:
-			to_check += [self.board.anti_diag()]
+		if x == (board.dimension - 1) - y:
+			to_check += [board.anti_diag()]
 
 		for sequence in to_check:
 			player = self._check_win_sequence(sequence)
