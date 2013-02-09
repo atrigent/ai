@@ -112,7 +112,8 @@ class TicTacToeGame:
 		self._clear_state()
 
 	def _check_cats_game_sequence(self, seq):
-		grouped = [k for k, g in groupby(val for val in seq if val is not None)]
+		grouped = list(groupby(val for val in seq
+		                           if val is not None))
 
 		return len(grouped) > 1
 
