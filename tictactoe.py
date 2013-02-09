@@ -10,20 +10,17 @@ class TicTacToeException(Exception):
 	pass
 
 class TicTacToeBoard:
-	def __init__(self, dimension, hpad, vpad, data=None):
+	def __init__(self, dimension, hpad, vpad):
 		self.dimension = dimension
 
 		self.hpad = hpad
 		self.vpad = vpad
 		self.pre_width = self._min_width(self.dimension)
 
-		self.clear(data)
+		self.clear()
 
 	def clear(self, data=None):
-		if data is None:
-			self.board = [[None] * self.dimension for i in range(self.dimension)]
-		else:
-			self.board = data
+		self.board = [[None] * self.dimension for i in range(self.dimension)]
 
 	def _print_board_line(self, before, sep, things):
 		if before is None:
