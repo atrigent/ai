@@ -99,6 +99,7 @@ class TicTacToeGame:
 
 			self.board[x][y] = i
 
+			print()
 			print('The state of the board is:')
 			self._print_board()
 			print()
@@ -216,3 +217,5 @@ while True:
 	if not 'yes'.startswith(prompt):
 		print('Fine. Bye.')
 		break;
+
+	print()
