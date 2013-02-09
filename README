@@ -32,4 +32,6 @@ it out, as long as there are two numbers in your input somewhere.
 
 As a bonus, you can also play this game by sshing to tictactoe@67.189.145.86, password threeinarow.
 
+Again, this was written using Python 3.2.
+
 :)
