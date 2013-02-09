@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-from itertools import chain, cycle, groupby
+from itertools import *
 import sys
 import re
 
