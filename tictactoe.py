@@ -130,23 +130,26 @@ class Board:
 		        self.board == other.board)
 
 	def is_equivalent(self, other):
-		for i in range(4):
-			if self == other:
-				return True
-
-			other.rotate()
-
-		other.reflect_horiz()
+		result = False
 
 		for i in range(4):
 			if self == other:
-				return True
+				result = True
 
 			other.rotate()
 
-		other.reflect_horiz()
+		if result is False:
+			other.reflect_horiz()
 
-		return False
+			for i in range(4):
+				if self == other:
+					result = True
+
+				other.rotate()
+
+			other.reflect_horiz()
+
+		return result
 
 	def get_equivalent_moves(self):
 		possible_moves = self.get_valid_moves()
