@@ -16,6 +16,13 @@ if it can win on the next move), but it was sometimes choosing the longer path. 
 property could be interpreted as being "sadistic" and therefore possibly a desireable trait
 for an adversarial AI to have, I thought that it should try to favor fast games.
 
+I did not separate the AI algorithm kernels out of the rest of the game code, so in that sense
+it might not be as general as it could be. However, the algorithms are sufficiently simple
+that I don't think there would be much value to that. As I've said before, the algorithm
+can be used with any board size and any number of players. I thought about supporting non-square
+boards, but I ultimately decided against it. I don't think it would be very difficult to support
+though - the main difference would be that there are no diagonals.
+
 This code also implements all of the optimizations having to do with equivalent rotations
 and reflections of the game board. This allows the game tree to be as small as possible. It
 also stops expanding the game tree when a win or tie is encountered.
