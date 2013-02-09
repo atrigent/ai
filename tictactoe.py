@@ -297,10 +297,10 @@ class AutomaticPlayer:
 		self.noises = noises
 
 	def get_move(self, game):
-		for noise in islice(cycle(self.noises), randint(5, 15)):
+		for noise in islice(cycle(self.noises), randint(3, 6)):
 			sys.stdout.write(noise + '... ')
 			sys.stdout.flush()
-			time.sleep(0.2)
+			time.sleep(0.1)
 
 		print()
 		print()
