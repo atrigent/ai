@@ -12,6 +12,10 @@ class TicTacToeException(Exception):
 	pass
 
 class Board:
+	"""
+	This class represents a tic-tac-toe board.
+	"""
+
 	def __init__(self, dimension, hpad, vpad):
 		self.dimension = dimension
 
@@ -22,6 +26,9 @@ class Board:
 		self.clear()
 
 	def clear(self):
+		"""
+		Reset the tic-tac-toe board.
+		"""
 		self.board = [[None] * self.dimension for i in range(self.dimension)]
 		self.last_moves = []
 
@@ -55,6 +62,12 @@ class Board:
 		pad()
 
 	def print(self, symbols):
+		"""
+		Print a representation of the board to stdout.
+		The symbols argument is a list that specifies how to
+		map values in the board to symbols in the printed
+		board.
+		"""
 		def objs_to_symbols(players):
 			return (symbols[player] for player in players if player is not None)
 
@@ -83,6 +96,9 @@ class Board:
 		self.board[x][y] = val
 
 	def put(self, x, y, val):
+		"""
+		Put a value into the board. This is used for making a move.
+		"""
 		if self.board[x][y] is not None:
 			raise TicTacToeException('This space is already occupied!')
 
@@ -90,6 +106,10 @@ class Board:
 		self.last_moves.append((x, y))
 
 	def undo(self):
+		"""
+		Undo the last move. All moves are kept track of, so moves
+		can be un-done until the board is in its initial state.
+		"""
 		if len(self.last_moves) == 0:
 			raise TicTacToeException('No more moves to undo!')
 
@@ -97,32 +117,61 @@ class Board:
 		self._put_val(x, y, None)
 
 	def row(self, num):
+		"""
+		Get a row from the board as a list.
+		"""
 		return (self.board[i][num] for i in range(self.dimension))
 
 	def col(self, num):
+		"""
+		Get a column from the board as a list.
+		"""
 		return self.board[num]
 
 	def _diag(self, a=1, b=0):
 		return (self.board[i][a*i + b] for i in range(self.dimension))
 
 	def main_diag(self):
+		"""
+		Get the main diagonal (from top left to bottom right)
+		as a list.
+		"""
 		return self._diag()
 
 	def anti_diag(self):
+		"""
+		Get the anti-diagonal (from bottom left to top right)
+		as a list.
+		"""
 		return self._diag(-1, -1)
 
 	def get_valid_moves(self):
+		"""
+		Get all moves that can currently be made on the board.
+		"""
 		return ((x, y) for x in range(self.dimension)
 		               for y in range(self.dimension)
 		               if self.board[x][y] is None)
 
 	def rotate(self):
+		"""
+		Rotate the board counter-clockwise, the equivalent of 90 degrees.
+		In other words, the top left position is now the top right position.
+		"""
 		self.board = [list(self.row(self.dimension - i - 1)) for i in range(self.dimension)]
 
 	def reflect_horiz(self):
+		"""
+		Reflect the board from left to right. In other words, the left middle
+		position is not at the right middle position and vice-versa.
+		"""
 		self.board.reverse()
 
 	def reflect_vert(self):
+		"""
+		Reflect the board from top to bottom. In other words, the top middle
+		position is now at the bottom middle position and vice-versa.
+		"""
 		self.board = [col.reverse() for col in self.board]
 
 	def __eq__(self, other):
@@ -182,10 +231,19 @@ class Board:
 		return False
 
 	def moves_equal(self, move1, move2):
+		"""
+		Check whether the two given moves are equivalent with
+		respect to this board, taking into account reflection and
+		rotation equivalencies.
+		"""
 		return self._moves_equal_with_rotations(move1, move2) or \
 		       self._moves_equal_with_rotations(move1, move2, (-1, self.dimension - 1))
 
 	def is_equivalent(self, other):
+		"""
+		Check whether this board is equivalent to another board, taking into account
+		reflection and rotation equivalencies.
+		"""
 		result = False
 
 		for i in range(4):
@@ -208,6 +266,11 @@ class Board:
 		return result
 
 	def get_equivalent_moves(self):
+		"""
+		Get a list of of unique moves, taking into account
+		rotations and reflections. This will be a subset
+		of the moves returned by get_valid_moves.
+		"""
 		possible_moves = self.get_valid_moves()
 		equivalent_moves = []
 
@@ -271,6 +334,9 @@ class Game:
 		                 moves=graphdict)
 
 	def shuffle_players(self):
+		"""
+		Make the players player in a random order.
+		"""
 		shuffle(self.players)
 
 	def __init__(self, *players, dimension=3, hpad=2, vpad=1):
@@ -294,6 +360,9 @@ class Game:
 		self.graph_board.clear()
 
 	def run(self):
+		"""
+		Run the game.
+		"""
 		print('The initial state of the board is:')
 		self.board.print(self.symbols)
 		print()
@@ -385,6 +454,10 @@ class Game:
 		return None
 
 	def do_move(self, x, y):
+		"""
+		Do a move. This function is called by the Player classes
+		in their get_move functions.
+		"""
 		if self.last_move is not None:
 			raise TicTacToeException('Come on man, you obviously can\'t go twice...')
 
