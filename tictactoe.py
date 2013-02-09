@@ -5,7 +5,6 @@ import sys
 import re
 import time
 from random import randint, choice, shuffle
-from copy import deepcopy
 from collections import namedtuple
 
 class TicTacToeException(Exception):
