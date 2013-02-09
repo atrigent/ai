@@ -6,6 +6,7 @@ import re
 
 class TicTacToeGame:
 	symbols = ['X', 'O', 'Y', 'Z']
+
 	def __init__(self, *players, dimension=3, hpad=2, vpad=1):
 		if len(players) > len(self.symbols):
 			raise Exception('Too many players!')
@@ -171,8 +172,6 @@ class TicTacToeGame:
 				return player
 
 		return None
-
-
 
 class ManualPlayer:
 	def __init__(self):
