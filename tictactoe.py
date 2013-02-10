@@ -314,7 +314,7 @@ class Board:
 		return self._rotationally_equivalent_with_moves(move1, other, move2) or \
 		       self._rotationally_equivalent_with_moves(move1, other, move2, (-1, self.dimension - 1))
 
-	def moves_equal(self, move1, move2):
+	def moves_equivalent(self, move1, move2):
 		"""
 		Check whether the two given moves are equivalent with
 		respect to this board, taking into account reflection and
@@ -342,7 +342,7 @@ class Board:
 
 		for px, py in possible_moves:
 			for ex, ey in unique_moves:
-				if self.moves_equal((px, py), (ex, ey)):
+				if self.moves_equivalent((px, py), (ex, ey)):
 					break
 			else:
 				unique_moves.append((px, py))
