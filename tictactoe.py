@@ -375,6 +375,9 @@ class Game:
 			board = Board(self.board.dimension, 0, 0)
 
 		moves = board.get_unique_moves()
+		if len(moves) == 0:
+			raise TicTacToeException('There are no moves to make from here!')
+
 		players = len(self.players)
 
 		best_move = None
