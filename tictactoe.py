@@ -10,6 +10,34 @@ from collections import namedtuple
 class TicTacToeException(Exception):
 	pass
 
+# For any given tictactoe board, there are at most
+# eight different orientations. If we number the corners
+# one through four:
+#
+# 1--2    2--1
+# |  |    |  |
+# 4--3    3--4
+#
+# 4--1    1--4
+# |  |    |  |
+# 3--2    2--3
+#
+# 3--4    4--3
+# |  |    |  |
+# 2--1    1--2
+#
+# 2--3    3--2
+# |  |    |  |
+# 1--4    4--1
+#
+# For any tictactoe board, transforming between
+# any of these orientations does not change the
+# essential nature of the game. We use this fact for
+# determining the equivalency of boards (is_equivalent),
+# determining the equivalency of moves with respect
+# to a board (move_equal), and for getting a list
+# of the essentially unique moves that a player
+# can make (get_unique_moves).
 class Board:
 	"""
 	This class represents a tic-tac-toe board.
@@ -215,6 +243,30 @@ class Board:
 		return True
 
 	def _moves_equal_with_rotations(self, move1, move2, x_trans=(1, 0)):
+		# To rotate a coordinate clockwise in increments of
+		# 90 degrees, the following transformations need
+		# to be done:
+		#
+		# 0 degrees:   (x, y) -> (x, y)
+		# 90 degrees:  (x, y) -> (-y, x)
+		# 180 degrees: (x, y) -> (-x, -y)
+		# 270 degrees: (x, y) -> (y, -x)
+		#
+		# What this essentially is is the transformation
+		# (x, y) -> (-y, x) applied a certain number of times.
+		# Thus, the same effect could probably be had by
+		# applying that operation the necessary number of times.
+		# However, I thought it would be faster to spell them
+		# all out.
+		#
+		# Note that, because we are ultimately using
+		# _get_with_move_and_transform here, we are actually
+		# rotating our VIEW of the board. This is the equivalent
+		# of rotating your head by the given amount, as opposed
+		# to rotating the piece of paper that the board is
+		# written on. Thus, the board effectively gets rotated
+		# counter-clockwise, even though we are transforming
+		# the coordinates clockwise.
 		x_coeff, x_add = x_trans
 
 		# These functions are mappings that need to be applied to x
