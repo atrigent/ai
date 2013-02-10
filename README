@@ -3,7 +3,7 @@ formulation described in the textbook, with a vector of utilities at each node. 
 to start up because it generates the entire game tree at the beginning. This allows gameplay
 to be smooth. Theoretically, this code could use more than two players or more than 3x3
 boards. However, memory usage and CPU time limitations make that pretty impractical. For the
-simple 3x3 case, this program takes about 7 seconds to start on my machine and uses about 27MB
+simple 3x3 case, this program takes about 5 seconds to start on my machine and uses about 26MB
 of RAM. I have not gotten it to successfully generate the tree for a 4x4 game yet - it requires
 multiple gigabytes of RAM and multiple minutes of time at least.
 

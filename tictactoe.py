@@ -365,7 +365,12 @@ class Game:
 		players = len(self.players)
 		moves = board.get_unique_moves()
 		if len(moves) == 0:
-			raise TicTacToeException('There are no moves to make from here!')
+			# Generate a non-winning endgame node.
+			# Such a condition has a score of 1 for
+			# all players.
+			return TreeNode(dist=0,
+			                scores=[1] * players,
+			                moves=None)
 
 		best_move = None
 		best_move_dist = 0
@@ -377,25 +382,16 @@ class Game:
 
 			subnode = None
 
-			# Generate a cat's game node, if necessary.
-			# In a cat's game, all players will have
-			# a score of 1
-			if self._check_cats_game(board):
+			# Generate a win game node, if necessary.
+			# In a winning state, the winner has score
+			# 2 and every other player has score 0.
+			winner = self._check_win(x, y, board)
+			if winner is not None:
+				scores = [0] * players
+				scores[player] = 2
 				subnode = TreeNode(dist=0,
-				                   scores=[1] * players,
+				                   scores=scores,
 				                   moves=None)
-
-			if subnode is None:
-				# Generate a win game node, if necessary.
-				# In a winning state, the winner has score
-				# 2 and every other player has score 0.
-				winner = self._check_win(x, y, board)
-				if winner is not None:
-					scores = [0] * players
-					scores[player] = 2
-					subnode = TreeNode(dist=0,
-					                   scores=scores,
-					                   moves=None)
 
 			if subnode is None:
 				# Otherwise, expand this node further.
@@ -415,11 +411,19 @@ class Game:
 
 			board.undo()
 
+		# If all of our children are non-winning endgame nodes, then
+		# this one might as well be also.
+		if all(child.scores == [1] * players and child.moves is None
+		       for child in treedict.values()):
+			return TreeNode(dist=0,
+			                scores=[1] * players,
+			                moves=None)
+
 		return TreeNode(dist=best_move_dist + 1,
 		                scores=best_move,
 		                moves=treedict)
 
-	# This function should return 26830 for a 3x3 2-player game
+	# This function should return 26442 for a 3x3 2-player game
 	def _tree_complexity(self, node=None):
 		if node is None:
 			node = self.tree
@@ -486,10 +490,6 @@ class Game:
 				print('We have a winner! It is {0}! Congratulations!'.format(self.symbols[winner]))
 				break
 
-			if self._check_cats_game():
-				print('Looks like nobody can win now - it\'s a tie! \'round these parts, we call that a "cat\'s game".')
-				break
-
 			# Traverse the game tree - figure out which path we just took
 			for (x, y), node in self.cur_tree.moves.items():
 				self.tree_board.put(x, y, self.cur_player)
@@ -500,27 +500,13 @@ class Game:
 
 				self.tree_board.undo()
 
+			if self.cur_tree.moves is None:
+				print('Looks like nobody can win now - it\'s a tie! \'round these parts, we call that a "cat\'s game".')
+				break
+
 		print()
 
 		self._clear_state()
-
-	def _check_cats_game_sequence(self, seq):
-		grouped = list(groupby(val for val in seq
-		                           if val is not None))
-
-		return len(grouped) > 1
-
-	def _check_cats_game(self, board=None):
-		if board is None:
-			board = self.board
-
-		all_seqs = chain(
-			(board.row(i) for i in range(board.dimension)),
-			(board.col(i) for i in range(board.dimension)),
-			[board.main_diag(), board.anti_diag()]
-		)
-
-		return all(self._check_cats_game_sequence(seq) for seq in all_seqs)
 
 	def _check_win_sequence(self, seq):
 		grouped = [k for k, g in groupby(seq)]
