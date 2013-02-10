@@ -228,21 +228,24 @@ class Board:
 		else:
 			return self.board[real_x][real_y]
 
-	def _moves_equal_with_transform(self, move,
-	                                trans_move,
-	                                x_trans, y_trans):
+	def _transformationally_equivalent_with_moves(self, move,
+	                                              other, trans_move,
+	                                              x_trans, y_trans):
 		# Check whether every square of this board with the given move made
-		# is the same as every square of this board with the OTHER given move
+		# is the same as every square of another board with the OTHER given move
 		# made and with an additional transformation applied to it.
+		#
+		# Note that this board and the "other board" can actually be the
+		# same board.
 		for x in range(self.dimension):
 			for y in range(self.dimension):
 				if self._get_with_move_and_transform((x, y), move, -1) != \
-				   self._get_with_move_and_transform((x, y), trans_move, -1, x_trans, y_trans):
+				   other._get_with_move_and_transform((x, y), trans_move, -1, x_trans, y_trans):
 					return False
 
 		return True
 
-	def _moves_equal_with_rotations(self, move1, move2, x_trans=(1, 0)):
+	def _rotationally_equivalent_with_moves(self, move1, other, move2, x_trans=(1, 0)):
 		# To rotate a coordinate clockwise in increments of
 		# 90 degrees, the following transformations need
 		# to be done:
@@ -297,14 +300,19 @@ class Board:
 		]
 
 		# Check whether the board with the first move made is the same
-		# as the board with the second move made plus any of the four
+		# as another board with the second move made plus any of the four
 		# rotation transformations.
 		for lx, ly in zip(x_lambdas, y_lambdas):
-			if self._moves_equal_with_transform(move1, move2,
-			                                    lx, ly):
+			if self._transformationally_equivalent_with_moves(move1, other, move2,
+			                                                  lx, ly):
 				return True
 
 		return False
+
+	def _equivalent_with_moves(self, move1, other, move2):
+		# Check all of the rotations with and without a horizontal reflection
+		return self._rotationally_equivalent_with_moves(move1, other, move2) or \
+		       self._rotationally_equivalent_with_moves(move1, other, move2, (-1, self.dimension - 1))
 
 	def moves_equal(self, move1, move2):
 		"""
@@ -313,9 +321,7 @@ class Board:
 		rotation equivalencies.
 		"""
 
-		# Check all of the rotations with and without a horizontal reflection
-		return self._moves_equal_with_rotations(move1, move2) or \
-		       self._moves_equal_with_rotations(move1, move2, (-1, self.dimension - 1))
+		return self._equivalent_with_moves(move1, self, move2)
 
 	def is_equivalent(self, other):
 		"""
