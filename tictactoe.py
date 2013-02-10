@@ -494,13 +494,11 @@ class Game:
 
 			# Traverse the game tree - figure out which path we just took
 			for (x, y), node in self.cur_tree.moves.items():
-				self.tree_board.put(x, y, self.cur_player)
-
-				if self.board.is_equivalent(self.tree_board):
+				if self.board.equivalent_with_moves(None, self.tree_board,
+				                                    (x, y), self.cur_player):
+					self.tree_board.put(x, y, self.cur_player)
 					self.cur_tree = node
 					break
-
-				self.tree_board.undo()
 
 			if self.cur_tree.moves is None:
 				print('Looks like nobody can win now - it\'s a tie! \'round these parts, we call that a "cat\'s game".')
