@@ -394,7 +394,7 @@ class Game:
 				scores = [1] * players
 				subnode = TreeNode(dist=0,
 				                   scores=scores,
-				                   moves={})
+				                   moves=None)
 
 			if subnode is None:
 				# Generate a win game node, if necessary.
@@ -406,7 +406,7 @@ class Game:
 					scores[player] = 2
 					subnode = TreeNode(dist=0,
 					                   scores=scores,
-					                   moves={})
+					                   moves=None)
 
 			if subnode is None:
 				# Otherwise, expand this node further.
