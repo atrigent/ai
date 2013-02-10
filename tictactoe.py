@@ -515,6 +515,8 @@ class Game:
 
 				self.tree_board.undo()
 
+		print()
+
 		self._clear_state()
 
 	def _check_cats_game_sequence(self, seq):
