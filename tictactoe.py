@@ -391,9 +391,8 @@ class Game:
 			# In a cat's game, all players will have
 			# a score of 1
 			if self._check_cats_game(board):
-				scores = [1] * players
 				subnode = TreeNode(dist=0,
-				                   scores=scores,
+				                   scores=[1] * players,
 				                   moves=None)
 
 			if subnode is None:
