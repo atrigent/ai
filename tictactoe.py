@@ -309,7 +309,7 @@ class Board:
 
 		return False
 
-	def _equivalent_with_moves(self, move1, other, move2):
+	def equivalent_with_moves(self, move1, other, move2):
 		# Check all of the rotations with and without a horizontal reflection
 		return self._rotationally_equivalent_with_moves(move1, other, move2) or \
 		       self._rotationally_equivalent_with_moves(move1, other, move2, (-1, self.dimension - 1))
@@ -321,7 +321,7 @@ class Board:
 		rotation equivalencies.
 		"""
 
-		return self._equivalent_with_moves(move1, self, move2)
+		return self.equivalent_with_moves(move1, self, move2)
 
 	def is_equivalent(self, other):
 		"""
@@ -329,7 +329,7 @@ class Board:
 		reflection and rotation equivalencies.
 		"""
 
-		return self._equivalent_with_moves(None, other, None)
+		return self.equivalent_with_moves(None, other, None)
 
 	def get_unique_moves(self):
 		"""
