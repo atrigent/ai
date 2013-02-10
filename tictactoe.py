@@ -432,6 +432,30 @@ class Game:
 		                scores=best_move,
 		                moves=treedict)
 
+	# This function should return 26830 for a 3x3 2-player game
+	def _tree_complexity(self, board=None, player=0):
+		if board is None:
+			board = Board(self.board.dimension, 0, 0)
+
+		moves = board.get_unique_moves()
+		if len(moves) == 0:
+			raise TicTacToeException('There are no moves to make from here!')
+
+		players = len(self.players)
+
+		num = 0
+		for x, y in moves:
+			board.put(x, y, player)
+
+			if self._check_cats_game(board) or self._check_win(x, y, board) is not None:
+				num += 1
+			else:
+				num += self._tree_complexity(board, (player + 1) % players)
+
+			board.undo()
+
+		return num
+
 	def shuffle_players(self):
 		"""
 		Make the players player in a random order.
