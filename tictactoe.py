@@ -604,19 +604,17 @@ class AutomaticPlayer:
 
 		node = game.cur_tree
 
-		# The best moves we can make have this score
-		best_score = max(move.scores[game.cur_player] for move in node.moves.values())
+		# The score of the best move that this player could make is
+		# stored in the current tree node
+		best_score = node.scores[game.cur_player]
+		best_dist = node.dist - 1
 
 		if best_score == 2:
 			print('Ha Ha Ha I can beat you now!')
 			time.sleep(0.5)
 			print()
 
-		# Among the moves that get us that score, what is the best distance to endgame?
-		best_dist = min(move.dist for move in node.moves.values()
-		                          if move.scores[game.cur_player] == best_score)
-
-		# Collect the moves that have the properties determined above
+		# Collect the best moves that this player could make
 		best_moves = []
 		for point, move_node in node.moves.items():
 			if move_node.scores[game.cur_player] == best_score and \
