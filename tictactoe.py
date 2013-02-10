@@ -328,26 +328,8 @@ class Board:
 		Check whether this board is equivalent to another board, taking into account
 		reflection and rotation equivalencies.
 		"""
-		result = False
 
-		for i in range(4):
-			if self == other:
-				result = True
-
-			other.rotate()
-
-		if result is False:
-			other.reflect_horiz()
-
-			for i in range(4):
-				if self == other:
-					result = True
-
-				other.rotate()
-
-			other.reflect_horiz()
-
-		return result
+		return self._equivalent_with_moves(None, other, None)
 
 	def get_unique_moves(self):
 		"""
