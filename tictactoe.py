@@ -625,18 +625,10 @@ class AutomaticPlayer:
 		ex, ey = choice(best_moves)
 
 		# Figure out the equivalent moves that the chosen move maps to
-		game.tree_board.put(ex, ey, game.cur_player)
-
 		equiv_moves = []
 		for x, y in game.board.get_valid_moves():
-			game.board.put(x, y, game.cur_player)
-
-			if game.board.is_equivalent(game.tree_board):
+			if game.board.equivalent_with_moves((x, y), game.tree_board, (ex, ey)):
 				equiv_moves.append((x, y))
-
-			game.board.undo()
-
-		game.tree_board.undo()
 
 		# Choose randomly from these equivalent moves
 		x, y = choice(equiv_moves)
