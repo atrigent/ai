@@ -639,17 +639,19 @@ class WumpusWorldAgent:
 		detectable_models = {}
 		for detectable in self.detectables:
 			models = self._detect_definites(self._detect(detectable), detectable)
-			detectable_models[detectable] = models
 
-			print(detectable + ': ' + str(models))
-			for model in models:
-				self.map.visualize_knowledge(self.field_sym_map, {
-					detectable: model,
-					'agent': [self.pos],
-					'goal': [self.goal]
-				})
+			if detectable_models.get(detectable, None) != models:
+				detectable_models[detectable] = models
 
-				print()
+				print(detectable + ': ' + str(models))
+				for model in models:
+					self.map.visualize_knowledge(self.field_sym_map, {
+						detectable: model,
+						'agent': [self.pos],
+						'goal': [self.goal]
+					})
+
+					print()
 
 		borders = sorted(self.map.get_border_rooms(), key=dist)
 		print('border rooms: ' + str(borders))
