@@ -541,17 +541,17 @@ class WumpusWorldAgent:
 		               pit_model | \
 		               {self.goal}
 
-		def extreme(direction, fallback_op, fallback_gen):
+		def extreme(direction, fallback_op, fallback_attr):
 			if self.bounds[direction] is not None:
 				return self.bounds[direction]
 			else:
-				return fallback_op(fallback_gen)
+				return fallback_op(getattr(coord, fallback_attr) for coord in known_coords)
 
-		lowest_x = extreme(WumpusWorld.LEFT, min, (x for x, y in known_coords))
-		highest_x = extreme(WumpusWorld.RIGHT, max, (x for x, y in known_coords))
+		lowest_x = extreme(WumpusWorld.LEFT, min, 'x')
+		highest_x = extreme(WumpusWorld.RIGHT, max, 'x')
 
-		lowest_y = extreme(WumpusWorld.DOWN, min, (y for x, y in known_coords))
-		highest_y = extreme(WumpusWorld.UP, max, (y for x, y in known_coords))
+		lowest_y = extreme(WumpusWorld.DOWN, min, 'y')
+		highest_y = extreme(WumpusWorld.UP, max, 'y')
 
 		pre_space = 3 if self.bounds[WumpusWorld.LEFT] is None else 0
 		post_dots = 3 if self.bounds[WumpusWorld.RIGHT] is None else 0
