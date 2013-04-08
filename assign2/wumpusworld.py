@@ -533,7 +533,7 @@ class WumpusWorldAgent:
 	def __init__(self):
 		self.direction = None
 		self.goal = None
-		self.wumpus_alive = None
+		self.screams = None
 		self.gold_count = None
 		self.map = None
 
@@ -542,7 +542,7 @@ class WumpusWorldAgent:
 	def start(self, goal, golds, direction):
 		self.direction = direction
 		self.goal = goal
-		self.wumpus_alive = True
+		self.screams = 0
 		self.gold_count = golds
 		self.map = WumpusWorldMap()
 
@@ -559,7 +559,7 @@ class WumpusWorldAgent:
 			self.current_plan = None
 
 		if WumpusWorld.SCREAM in others:
-			self.wumpus_alive = False
+			self.screams += 1
 
 		if room:
 			print('Room: ' + str(room))
