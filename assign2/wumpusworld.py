@@ -626,28 +626,28 @@ class WumpusWorldAgent:
 		def dist(coord):
 			return math.sqrt((coord.x - self.pos.x)**2 + (coord.y - self.pos.y)**2)
 
-		wumpuses = self._detect_definites(self._detect('wumpus'), 'wumpus')
-		pits = self._detect_definites(self._detect('pit'), 'pit')
+		detectable_models = {}
+		for detectable in self.detectables:
+			models = self._detect_definites(self._detect(detectable), detectable)
+			detectable_models[detectable] = models
 
-		for wumpus_model, pit_model in itertools.product(wumpuses, pits):
-			print('wumpus: ' + str(wumpus_model))
-			print('pit: ' + str(pit_model))
-			self.map.visualize_knowledge(self.field_sym_map, {
-				'wumpus': wumpus_model,
-				'pit': pit_model,
-				'goal': [self.goal],
-				'agent': [self.pos]
-			})
+			print(detectable + ': ' + str(models))
+			for model in models:
+				self.map.visualize_knowledge(self.field_sym_map, {
+					detectable: model,
+					'agent': [self.pos],
+					'goal': [self.goal]
+				})
 
-			print()
+				print()
 
 		borders = sorted(self.map.get_border_rooms(), key=dist)
 		print('border rooms: ' + str(borders))
 
 		for room in borders:
 			# skip over rooms that might be unsafe
-			if any(room in model for model in wumpuses) or \
-			   any(room in model for model in pits) or \
+			if any(room in model for models in detectable_models.values()
+			                     for model in models) or \
 			   not self.map.all_vals(room, self.detectables.keys(), False):
 				continue
 
