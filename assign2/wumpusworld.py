@@ -208,7 +208,7 @@ class WumpusWorldMap:
 		if high is not None:
 			self.bounds[self.axes[axis].high] = high
 
-	def infer_extreme(self, pos, direction):
+	def set_extreme_at(self, pos, direction):
 		extreme, axis = self.directions[direction]
 
 		self.set_extremes(axis, **{extreme: getattr(pos, axis)})
@@ -555,7 +555,7 @@ class WumpusWorldAgent:
 		print('Percepts: ' + str(others))
 
 		if WumpusWorld.BUMP in others:
-			self.map.infer_extreme(pos, self.direction)
+			self.map.set_extreme_at(pos, self.direction)
 
 			# Our current strategy obviously isn't
 			# going to work
