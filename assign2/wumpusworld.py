@@ -236,20 +236,23 @@ class WumpusWorldMap:
 
 		return rooms
 
-	def safe(self, coord, things):
-		percepts = [self.thing_percept_map[thing] for thing in things]
+	def _check_vals(self, coord, op, fields, val):
+		return op(getattr(self.rooms[coord], field) is val
+		          for field in fields)
 
-		def does_not_contain(coord, whatevers):
-			return all(getattr(self.rooms[coord], whatever) is False
-			           for whatever in whatevers)
+	def all_vals(self, coord, fields, val):
+		return self._check_vals(coord, all, fields, val)
 
-		return does_not_contain(coord, things) or \
-		       any(does_not_contain(adj, percepts)
-		           for adj in self.adjacent(coord))
+	def any_vals(self, coord, fields, val):
+		return self._check_vals(coord, any, fields, val)
 
-	def unsafe_adjacent(self, coord, things):
+	def adjacent_with(self, coord, things, val):
 		return (adj for adj in self.adjacent(coord)
-		            if not self.safe(adj, things))
+		            if self.all_vals(adj, things, val))
+
+	def adjacent_with_not(self, coord, things, val):
+		return (adj for adj in self.adjacent(coord)
+		            if not self.any_vals(adj, things, val))
 
 	def _room_string(self, coord, extras):
 		things = []
@@ -567,45 +570,31 @@ class WumpusWorldAgent:
 
 		self.pos = pos
 
-	def _detect_wumpus(self):
-		stenches = (coord for coord, room in self.map.rooms.items()
-		                  if room.stench)
+	DetectableInfo = namedtuple('DetectableInfo', 'percept limit')
 
-		models = None
+	detectables = {
+		'wumpus': DetectableInfo('stench', 1),
+		'pit': DetectableInfo('breeze', float('inf'))
+	}
 
-		for coord in stenches:
-			potential_models = {frozenset([adj]) for adj in self.map.unsafe_adjacent(coord, ['wumpus'])}
+	def _detect(self, thing):
+		percept, limit = self.detectables[thing]
 
-			if models is None:
-				models = potential_models
-			else:
-				product = itertools.product(models, potential_models)
-				models = {first & second for first, second in product}
-				models -= {frozenset()}
+		percepts = (coord for coord, room in self.map.rooms.items()
+		                  if getattr(room, percept))
 
-		if models is None:
-			models = {frozenset()}
+		definites = set()
 
-		return models
+		models = {frozenset()}
 
-	def _detect_pits(self):
-		breezes = (coord for coord, room in self.map.rooms.items()
-		                 if room.breeze)
+		for coord in percepts:
+			definites |= set(self.map.adjacent_with(coord, [thing], True))
+			potential_models = {frozenset(coords) - definites
+			                    for coords in powerset(self.map.adjacent_with_not(coord, [thing], False), 1)}
+			product = itertools.product(models, potential_models)
+			models = {a | b for a, b in product}
 
-		models = None
-
-		for coord in breezes:
-			potential_models = {frozenset(coords) for coords in powerset(self.map.unsafe_adjacent(coord, ['pit']), 1)}
-
-			if models is None:
-				models = potential_models
-			else:
-				product = itertools.product(models, potential_models)
-				models = {first | second for first, second in product}
-				models -= {frozenset()}
-
-		if models is None:
-			models = {frozenset()}
+		models = {model for model in models if len(model) + len(definites) <= limit}
 
 		return models
 
@@ -615,27 +604,30 @@ class WumpusWorldAgent:
 			if next_state is None:
 				continue
 
-			if self.map.safe(next_state, ['pit', 'wumpus']) or next_state == dest:
+			if self.map.all_vals(next_state, self.detectables.keys(), False) or next_state == dest:
 				yield next_state, [direction, WumpusWorld.FORWARD]
 
 	def _plan_movement(self, dest):
 		return plan_movement(self.pos, dest, self._next_states)
 
 	def _detect_definites(self, models, thing):
+		if not models:
+			return models
+
 		definites = reduce(lambda a, b: a & b, models)
 
 		for definite in definites:
+			print('Deduced {0} at {1}'.format(thing, definite))
 			self.map.add_knowledge(definite, **{thing: True})
+
+		return {model - definites for model in models}
 
 	def _explore(self):
 		def dist(coord):
 			return math.sqrt((coord.x - self.pos.x)**2 + (coord.y - self.pos.y)**2)
 
-		wumpuses = self._detect_wumpus()
-		self._detect_definites(wumpuses, 'wumpus')
-
-		pits = self._detect_pits()
-		self._detect_definites(pits, 'pit')
+		wumpuses = self._detect_definites(self._detect('wumpus'), 'wumpus')
+		pits = self._detect_definites(self._detect('pit'), 'pit')
 
 		for wumpus_model, pit_model in itertools.product(wumpuses, pits):
 			print('wumpus: ' + str(wumpus_model))
@@ -655,7 +647,8 @@ class WumpusWorldAgent:
 		for room in borders:
 			# skip over rooms that might be unsafe
 			if any(room in model for model in wumpuses) or \
-			   any(room in model for model in pits):
+			   any(room in model for model in pits) or \
+			   not self.map.all_vals(room, self.detectables.keys(), False):
 				continue
 
 			self.current_plan = self._plan_movement(room)
@@ -663,8 +656,7 @@ class WumpusWorldAgent:
 
 		for room in borders:
 			# skip over rooms that are definitely unsafe
-			if all(room in model for model in wumpuses) or \
-			   all(room in model for model in pits):
+			if self.map.any_vals(room, self.detectables.keys(), True):
 				continue
 
 			self.current_plan = self._plan_movement(room)
