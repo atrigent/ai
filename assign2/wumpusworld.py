@@ -562,10 +562,11 @@ class WumpusWorldAgent:
 
 		between_line = '+'.join([pre_dots] + column_dashes + [post_dots])
 
+		def dots():
+			for _ in range(3): print(dots_line)
+
 		if self.bounds[WumpusWorld.DOWN] is None:
-			print(dots_line)
-			print(dots_line)
-			print(dots_line)
+			dots()
 
 		for x, colnum in enumerate(range(lowest_y, highest_y+1)):
 			print(between_line)
@@ -574,9 +575,7 @@ class WumpusWorldAgent:
 		print(between_line)
 
 		if self.bounds[WumpusWorld.UP] is None:
-			print(dots_line)
-			print(dots_line)
-			print(dots_line)
+			dots()
 
 	def get_action(self):
 		room = self.rooms[self.pos]
