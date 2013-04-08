@@ -541,11 +541,11 @@ class WumpusWorldAgent:
 		               pit_model | \
 		               {self.goal}
 
-		lowest_x = self.bounds[WumpusWorld.DOWN] or min(x for x, y in known_coords)
-		highest_x = self.bounds[WumpusWorld.UP] or max(x for x, y in known_coords)
+		lowest_x = self.bounds[WumpusWorld.LEFT] or min(x for x, y in known_coords)
+		highest_x = self.bounds[WumpusWorld.RIGHT] or max(x for x, y in known_coords)
 
-		lowest_y = self.bounds[WumpusWorld.LEFT] or min(y for x, y in known_coords)
-		highest_y = self.bounds[WumpusWorld.RIGHT] or max(y for x, y in known_coords)
+		lowest_y = self.bounds[WumpusWorld.DOWN] or min(y for x, y in known_coords)
+		highest_y = self.bounds[WumpusWorld.UP] or max(y for x, y in known_coords)
 
 		pre_space = 3 if self.bounds[WumpusWorld.LEFT] else 0
 		post_dots = 3 if self.bounds[WumpusWorld.RIGHT] else 0
