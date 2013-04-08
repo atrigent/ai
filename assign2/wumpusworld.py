@@ -46,7 +46,7 @@ class immutabledefaultdict(dict):
 def color(stuff, cnums):
 	return '\x1b[{0}m{1}\x1b[m'.format(';'.join(str(cnum) for cnum in cnums), stuff)
 
-SearchNode = namedtuple('SearchNode', 'state parent action cost')
+SearchNode = namedtuple('SearchNode', 'state parent actions cost')
 
 class FrontierQueue:
 	REMOVED = '<removed-task>'      # placeholder for a removed task
@@ -89,7 +89,7 @@ def plan_movement(start, dest, next_states):
 		plan = []
 
 		while node.parent is not None:
-			plan.insert(0, node.action)
+			plan = node.actions + plan
 			node = node.parent
 
 		return plan
@@ -109,8 +109,8 @@ def plan_movement(start, dest, next_states):
 
 		explored.add(node.state)
 
-		for next_state, action in next_states(node.state, dest):
-			child = SearchNode(next_state, node, action, node.cost + 1)
+		for next_state, actions in next_states(node.state, dest):
+			child = SearchNode(next_state, node, actions, node.cost + 1)
 
 			if child.state not in explored and \
 			   not frontier.has_state(child.state):
@@ -616,7 +616,7 @@ class WumpusWorldAgent:
 				continue
 
 			if self.map.safe(next_state, ['pit', 'wumpus']) or next_state == dest:
-				yield next_state, direction
+				yield next_state, [direction, WumpusWorld.FORWARD]
 
 	def _plan_movement(self, dest):
 		return plan_movement(self.pos, dest, self._next_states)
@@ -689,16 +689,15 @@ class WumpusWorldAgent:
 			else:
 				self._explore()
 
-		action = self.current_plan[0]
-		if action in WumpusWorldMap.directions:
-			if self.direction != action:
+		while self.current_plan:
+			action = self.current_plan.pop(0)
+
+			if action in WumpusWorldMap.directions:
+				if action == self.direction:
+					continue
+
 				self.direction = action
-				return action
-			else:
-				self.current_plan.pop(0)
-				return WumpusWorld.FORWARD
-		else:
-			self.current_plan.pop(0)
+
 			return action
 
 parser = argparse.ArgumentParser(description='Wumpus World with AI')
