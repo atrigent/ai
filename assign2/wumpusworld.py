@@ -547,8 +547,8 @@ class WumpusWorldAgent:
 		lowest_y = self.bounds[WumpusWorld.DOWN] or min(y for x, y in known_coords)
 		highest_y = self.bounds[WumpusWorld.UP] or max(y for x, y in known_coords)
 
-		pre_space = 3 if self.bounds[WumpusWorld.LEFT] else 0
-		post_dots = 3 if self.bounds[WumpusWorld.RIGHT] else 0
+		pre_space = 3 if self.bounds[WumpusWorld.LEFT] is None else 0
+		post_dots = 3 if self.bounds[WumpusWorld.RIGHT] is None else 0
 
 		grid = [[self._room_string(Coord(x, y), wumpus_model, pit_model) for y in range(lowest_y, highest_y+1)]
 		        for x in range(lowest_x, highest_x+1)]
