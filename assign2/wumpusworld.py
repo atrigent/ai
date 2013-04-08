@@ -333,16 +333,6 @@ class WumpusWorldAgent:
 		self._reset()
 
 	# FROM HERE ...
-	def _next_pos(self, pos, direction):
-		next_pos = {
-			WumpusWorld.RIGHT: lambda: Coord(pos.x + 1, pos.y),
-			WumpusWorld.LEFT:  lambda: Coord(pos.x - 1, pos.y),
-			WumpusWorld.UP:    lambda: Coord(pos.x, pos.y + 1),
-			WumpusWorld.DOWN:  lambda: Coord(pos.x, pos.y - 1)
-		}[direction]()
-
-		return next_pos if self._is_valid(next_pos) else None
-
 	def _is_valid(self, coord):
 		left = self.bounds[WumpusWorld.LEFT]
 		right = self.bounds[WumpusWorld.RIGHT]
@@ -353,6 +343,16 @@ class WumpusWorldAgent:
 		       (right is None or coord.x <= right) and \
 		       (bottom is None or coord.y >= bottom) and \
 		       (top is None or coord.y <= top)
+
+	def _next_pos(self, pos, direction):
+		next_pos = {
+			WumpusWorld.RIGHT: lambda: Coord(pos.x + 1, pos.y),
+			WumpusWorld.LEFT:  lambda: Coord(pos.x - 1, pos.y),
+			WumpusWorld.UP:    lambda: Coord(pos.x, pos.y + 1),
+			WumpusWorld.DOWN:  lambda: Coord(pos.x, pos.y - 1)
+		}[direction]()
+
+		return next_pos if self._is_valid(next_pos) else None
 
 	def _adjacent(self, coord):
 		for direction in WumpusWorld.directions:
