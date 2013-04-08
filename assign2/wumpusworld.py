@@ -520,10 +520,10 @@ class WumpusWorld:
 
 		print('Your final score was ' + str(score))
 
-def powerset_no_empty(iterable):
+def powerset(iterable, minlen=0):
 	"powerset([1,2,3]) --> (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
 	s = list(iterable)
-	return itertools.chain.from_iterable(itertools.combinations(s, r) for r in range(1, len(s)+1))
+	return itertools.chain.from_iterable(itertools.combinations(s, r) for r in range(minlen, len(s)+1))
 
 class WumpusWorldAgent:
 	def _reset(self):
@@ -595,7 +595,7 @@ class WumpusWorldAgent:
 		models = None
 
 		for coord in breezes:
-			potential_models = {frozenset(coords) for coords in powerset_no_empty(self.map.unsafe_adjacent(coord, ['pit']))}
+			potential_models = {frozenset(coords) for coords in powerset(self.map.unsafe_adjacent(coord, ['pit']), 1)}
 
 			if models is None:
 				models = potential_models
