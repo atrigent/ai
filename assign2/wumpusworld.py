@@ -1,9 +1,13 @@
 from collections import defaultdict, namedtuple
+from functools import reduce
 import argparse
 import itertools
 import heapq
 import math
 import re
+
+def color(stuff, cnums):
+	return '\x1b[{0}m{1}\x1b[m'.format(';'.join(str(cnum) for cnum in cnums), stuff)
 
 SearchNode = namedtuple('SearchNode', 'state parent action cost')
 
@@ -78,13 +82,6 @@ def plan_movement(start, dest, next_states):
 			     frontier.prio_of_state(child.state) > child.cost:
 				frontier.add_node(child)
 
-Coord = namedtuple('Coord', 'x y')
-
-WumpusWorldRoomT = namedtuple('WumpusWorldRoom',
-                              'pit breeze wumpus stench gold')
-def WumpusWorldRoom(pit=None, breeze=None, wumpus=None, stench=None, gold=None):
-	return WumpusWorldRoomT(pit, breeze, wumpus, stench, gold)
-
 def enum(name, *vals):
 	vals = [val.lower() for val in vals]
 
@@ -98,14 +95,251 @@ def enum(name, *vals):
 
 	return decorate
 
-# Directions the agent is facing
-@enum('directions', 'UP', 'RIGHT', 'DOWN', 'LEFT')
+Coord = namedtuple('Coord', 'x y')
+
+class WumpusWorldMap:
+	AxisInfo = namedtuple('AxisInfo', 'low high')
+	DirInfo = namedtuple('DirInfo', 'extreme axis')
+	WumpusWorldRoom = namedtuple('WumpusWorldRoom',
+	                             'explored pit breeze wumpus stench gold')
+
+	axes = {
+		# x increases from west to east
+		'x': AxisInfo('west', 'east'),
+		# y increases from south to north
+		'y': AxisInfo('south', 'north')
+	}
+
+	directions = {}
+	for axis, (low, high) in axes.items():
+		directions[low] = DirInfo('low', axis)
+		directions[high] = DirInfo('high', axis)
+
+	thing_percept_map = {
+		'wumpus': 'stench',
+		'pit': 'breeze'
+	}
+
+	def __init__(self):
+		self.rooms = {}
+		self.bounds = {direction: None for direction in self.directions}
+
+	def _on_board_axis(self, coord, axis, low=None, high=None):
+		if low is None:
+			low = self.bounds[self.axes[axis].low]
+
+		if high is None:
+			high = self.bounds[self.axes[axis].high]
+
+		if low is not None and high is not None and low > high:
+			raise RuntimeError()
+
+		val = getattr(coord, axis)
+
+		return (low is None or val >= low) and \
+		       (high is None or val <= high)
+
+	def on_board(self, coord):
+		return all(self._on_board_axis(coord, axis) for axis in self.axes)
+
+	def next_pos(self, pos, direction):
+		extreme, axis = self.directions[direction]
+		diff = 1 if extreme == 'high' else -1
+
+		pos = pos._replace(**{axis: getattr(pos, axis) + diff})
+
+		return pos if self.on_board(pos) else None
+
+	def adjacent(self, coord):
+		for direction in self.directions:
+			next_pos = self.next_pos(coord, direction)
+			if next_pos is not None:
+				yield next_pos
+
+	def set_extremes(self, axis, low=None, high=None):
+		#if any(not self._on_board_axis(coord, axis, low, high)
+		#       for coord in self.rooms.keys()):
+		#	raise RuntimeError()
+		for coord in list(self.rooms):
+			if not self._on_board_axis(coord, axis, low, high):
+				del self.rooms[coord]
+
+		if low is not None:
+			self.bounds[self.axes[axis].low] = low
+
+		if high is not None:
+			self.bounds[self.axes[axis].high] = high
+
+	def infer_extreme(self, pos, direction):
+		extreme, axis = self.directions[direction]
+
+		self.set_extremes(axis, **{extreme: getattr(pos, axis)})
+
+	def add_knowledge(self, coord, **kwargs):
+		if not self.on_board(coord):
+			raise RuntimeError()
+
+		if coord in self.rooms:
+			room = self.rooms[coord]
+		else:
+			room = self.WumpusWorldRoom(False, None, None, None, None, None)
+
+		room = room._replace(**kwargs)
+		self.rooms[coord] = room
+
+		for thing, percept in self.thing_percept_map.items():
+			if getattr(room, percept) is False:
+				for adj in self.adjacent(coord):
+					if adj not in self.rooms or getattr(self.rooms[adj], thing) is not False:
+						self.add_knowledge(adj, **{thing: False})
+
+	def get_border_rooms(self):
+		rooms = set()
+
+		for coord, room in self.rooms.items():
+			if room.explored:
+				rooms |= {adj for adj in self.adjacent(coord)
+				              if adj not in self.rooms or
+				                 not self.rooms[adj].explored}
+
+		return rooms
+
+	def safe(self, coord, things):
+		percepts = [self.thing_percept_map[thing] for thing in things]
+
+		def does_not_contain(coord, whatevers):
+			return coord in self.rooms and \
+			       all(getattr(self.rooms[coord], whatever) is False
+			           for whatever in whatevers)
+
+		return does_not_contain(coord, things) or \
+		       any(does_not_contain(adj, percepts)
+		           for adj in self.adjacent(coord))
+
+	def unsafe_adjacent(self, coord, things):
+		return (adj for adj in self.adjacent(coord)
+		            if not self.safe(adj, things))
+
+	def _room_string(self, coord, extras):
+		things = []
+
+		for k, v in extras.items():
+			if coord in v:
+				things.append(k)
+
+		if coord in self.rooms:
+			room = self.rooms[coord]
+
+			field_sym_map = {
+				'explored': ('E', ()),
+				'pit': ('P', (47, 30)),
+				'breeze': ('B', (47, 30)),
+				'stench': ('S', (41, 30)),
+				'wumpus': ('W', (41, 30)),
+				'gold': ('G', (45, 30))
+			}
+
+			for f in room._fields:
+				if f in field_sym_map:
+					sym, colors = field_sym_map[f]
+					val = getattr(room, f)
+
+					if val is False:
+						sym = '!' + sym
+					elif val is True:
+						sym = color(sym, colors)
+
+					if val is not None:
+						things.append(sym)
+
+		return ','.join(things)
+
+	def _printed_len(self, s):
+		in_escseq = False
+		length = 0
+
+		for char in s:
+			if char == '\x1b':
+				in_escseq = True
+
+			if in_escseq:
+				if char == 'm':
+					in_escseq = False
+
+				continue
+
+			length += 1
+
+		return length
+
+	def _ljust(self, s, w):
+		l = self._printed_len(s)
+		if l < w:
+			return s + (' ' * (w - l))
+		else:
+			return s
+
+	def visualize_knowledge(self, extras):
+		known_coords = set(self.rooms.keys()).union(*extras.values())
+
+		def extreme(extreme, axis):
+			direction = getattr(self.axes[axis], extreme)
+
+			if self.bounds[direction] is not None:
+				return self.bounds[direction]
+			else:
+				op = {
+					'low': min,
+					'high': max
+				}[extreme]
+
+				return op(getattr(coord, axis) for coord in known_coords)
+
+		lowest_x = extreme('low', 'x')
+		highest_x = extreme('high', 'x') + 1
+
+		lowest_y = extreme('low', 'y')
+		highest_y = extreme('high', 'y') + 1
+
+		num_dots = 3
+		pre = num_dots if self.bounds['west'] is None else 0
+		post = num_dots if self.bounds['east'] is None else 0
+
+		grid = [[self._room_string(Coord(x, y), extras)
+		         for y in range(lowest_y, highest_y)]
+		        for x in range(lowest_x, highest_x)]
+
+		col_widths = [max(max(self._printed_len(s), 3) for s in column) for column in grid]
+
+		dots_line = '.'.join(' ' * width for width in [pre] + col_widths) + '.'
+
+		col_dashes = ['-' * width for width in col_widths]
+		between_line = '+'.join(['.' * pre] + col_dashes + ['.' * post])
+
+		def dots():
+			for _ in range(num_dots): print(dots_line)
+
+		if self.bounds['north'] is None:
+			dots()
+
+		for x in reversed(range(highest_y - lowest_y)):
+			print(between_line)
+			col_vals = [self._ljust(col[x], width) for width, col in zip(col_widths, grid)]
+			print('|'.join([' ' * pre] + col_vals) + '|')
+
+		print(between_line)
+
+		if self.bounds['south'] is None:
+			dots()
+
 # Actions the agent can take
-@enum('actions', 'FORWARD', 'TURN_LEFT', 'TURN_RIGHT',
-                 'GRAB', 'SHOOT', 'CLIMB')
-# Things that the agent can perceive
-@enum('percepts', 'STENCH', 'BREEZE', 'GLITTER',
-                  'BUMP', 'SCREAM')
+# The agent can also face a certain direction with the
+# WumpusWorldMap.directions values.
+@enum('actions', 'FORWARD', 'GRAB', 'SHOOT', 'CLIMB')
+# Room-independent things that the agent can perceive
+# The room-dependent things are stored in the WumpusWorldRoom
+# namedtuple
+@enum('percepts', 'BUMP', 'SCREAM')
 class WumpusWorld:
 	map_file_descriptions = {
 		'M': ('size', True, False),
@@ -141,7 +375,7 @@ class WumpusWorld:
 			key, singular, normalize = self.map_file_descriptions[type]
 
 			if singular and key in d:
-				raise RuntimeException
+				raise RuntimeError()
 
 			if normalize:
 				x -= 1
@@ -156,86 +390,40 @@ class WumpusWorld:
 
 		return d
 
-	def _is_valid(self, coord):
-		return coord.x >= 0 and coord.y >= 0 and \
-		       coord.x < self.size.x and coord.y < self.size.y
-
-	def _next_pos(self, pos, direction):
-		next_pos = {
-			self.RIGHT: lambda: Coord(pos.x + 1, pos.y),
-			self.LEFT:  lambda: Coord(pos.x - 1, pos.y),
-			self.UP:    lambda: Coord(pos.x, pos.y + 1),
-			self.DOWN:  lambda: Coord(pos.x, pos.y - 1)
-		}[direction]()
-
-		return next_pos if self._is_valid(next_pos) else None
-
-	def _adjacent(self, coord):
-		for direction in self.directions:
-			next_pos = self._next_pos(coord, direction)
-			if next_pos is not None:
-				yield next_pos
-
-	def _make_room(self, coord, description):
-		def adj_to(coords):
-			return any(adj in coords for adj in self._adjacent(coord))
-
-		return WumpusWorldRoom(pit=coord in description['pit'],
-		                       breeze=adj_to(description['pit']),
-		                       wumpus=coord == description['wumpus'],
-		                       stench=adj_to([description['wumpus']]) or \
-		                              coord == description['wumpus'],
-		                       gold=coord in description['gold'])
-
 	def __init__(self, path, agent):
 		with open(path) as f:
 			description = self._parse_map_file(f)
 
-			self.size = description['size']
+			size = description['size']
 			self.goal = description['goal']
 			self.start = description['start']
 			self.golds = len(description['gold'])
 
-		self.world = [[self._make_room(Coord(x, y), description)
-			           for y in range(self.size.y)]
-		              for x in range(self.size.x)]
+		self.map = WumpusWorldMap()
+		self.map.set_extremes('x', 0, size.x - 1)
+		self.map.set_extremes('y', 0, size.y - 1)
+
+		def adj_to(coords):
+			return any(adj in coords for adj in self.map.adjacent(coord))
+
+		for x, y in itertools.product(range(size.x), range(size.y)):
+			coord = Coord(x, y)
+			self.map.add_knowledge(coord,
+			                       explored=True,
+			                       pit=coord in description['pit'],
+			                       breeze=adj_to(description['pit']),
+			                       wumpus=coord == description['wumpus'],
+			                       stench=adj_to([description['wumpus']]) or \
+			                              coord == description['wumpus'],
+			                       gold=coord in description['gold'])
 
 		self.agent = agent
 
 	def _rel_to_start(self, coord):
 		return Coord(coord.x - self.start.x, coord.y - self.start.y)
 
-	def _percepts_at_room(self, room):
-		percept_map = {
-			'breeze': self.BREEZE,
-			'stench': self.STENCH,
-			'gold': self.GLITTER
-		}
-
-		return [v for k, v in percept_map.items() if getattr(room, k)]
-
-	def _prev_in_list(self, elem, things):
-		idx = things.index(elem) - 1
-
-		if idx < 0:
-			idx = len(things) - 1
-
-		return things[idx]
-
-	def _next_in_list(self, elem, things):
-		idx = things.index(elem) + 1
-
-		if idx >= len(things):
-			idx = 0
-
-		return things[idx]
-
-	def _remove_state(self, coord, state):
-		self.world[coord.x][coord.y] = \
-			self.world[coord.x][coord.y]._replace(**{state: False})
-
 	def run(self):
-		direction = self.RIGHT
+		direction = 'east'
 		score = 0
 		old_pos = None
 		pos = self.start
@@ -246,14 +434,14 @@ class WumpusWorld:
 
 		while True:
 			if old_pos != pos:
-				room = self.world[pos.x][pos.y]
+				room = self.map.rooms[pos]
 
 				if room.wumpus or room.pit:
 					dead = True
 					break
 
 				agent_pos = self._rel_to_start(pos)
-				agent.perceive(agent_pos, self._percepts_at_room(room))
+				agent.perceive(agent_pos, room=room)
 				old_pos = pos
 
 			action = agent.get_action()
@@ -261,20 +449,16 @@ class WumpusWorld:
 			print('Action: ' + str(action))
 
 			if action == self.FORWARD:
-				new_pos = self._next_pos(pos, direction)
+				new_pos = self.map.next_pos(pos, direction)
 				if new_pos is None:
-					agent.perceive(agent_pos, [self.BUMP])
+					agent.perceive(agent_pos, others=[self.BUMP])
 				else:
 					score -= 1
 					pos = new_pos
-			elif action == self.TURN_LEFT:
-				direction = self._prev_in_list(direction, self.directions)
-			elif action == self.TURN_RIGHT:
-				direction = self._next_in_list(direction, self.directions)
 			elif action == self.GRAB:
 				if room.gold:
 					score += 1000
-					self._remove_state(pos, 'gold')
+					self.map.add_knowledge(pos, gold=False)
 			elif action == self.CLIMB:
 				if pos == self.goal:
 					break
@@ -282,19 +466,18 @@ class WumpusWorld:
 				if arrows > 0:
 					check = pos
 					while True:
-						check = self._next_pos(check, direction)
+						check = self.map.next_pos(check, direction)
 						if check is None:
 							break
 
-						if self.world[check.x][check.y].wumpus:
-							agent.perceive(agent_pos, [self.SCREAM])
-							self._remove_state(check, 'wumpus')
+						if self.map.rooms[check].wumpus:
+							agent.perceive(agent_pos, others=[self.SCREAM])
+							self.map.add_knowledge(check, wumpus=False)
 							break
 
 					arrows -= 1
 					score -= 100
-			elif action in self.directions:
-				# XXX
+			elif action in WumpusWorldMap.directions:
 				direction = action
 
 			print('\tPosition: ' + str(pos))
@@ -314,13 +497,6 @@ def powerset_no_empty(iterable):
 
 class WumpusWorldAgent:
 	def _reset(self):
-		self.rooms = defaultdict(lambda: set())
-		self.bounds = {
-			WumpusWorld.LEFT: None,
-			WumpusWorld.RIGHT: None,
-			WumpusWorld.UP: None,
-			WumpusWorld.DOWN: None
-		}
 		self.pos = None
 		self.current_plan = None
 
@@ -329,158 +505,121 @@ class WumpusWorldAgent:
 		self.goal = None
 		self.wumpus_alive = None
 		self.gold_count = None
+		self.map = None
 
 		self._reset()
 
-	# FROM HERE ...
-	def _is_valid(self, coord):
-		left = self.bounds[WumpusWorld.LEFT]
-		right = self.bounds[WumpusWorld.RIGHT]
-		bottom = self.bounds[WumpusWorld.DOWN]
-		top = self.bounds[WumpusWorld.UP]
+	def start(self, goal, golds, direction):
+		self.direction = direction
+		self.goal = goal
+		self.wumpus_alive = True
+		self.gold_count = golds
+		self.map = WumpusWorldMap()
 
-		return (left is None or coord.x >= left) and \
-		       (right is None or coord.x <= right) and \
-		       (bottom is None or coord.y >= bottom) and \
-		       (top is None or coord.y <= top)
+		self._reset()
 
-	def _next_pos(self, pos, direction):
-		next_pos = {
-			WumpusWorld.RIGHT: lambda: Coord(pos.x + 1, pos.y),
-			WumpusWorld.LEFT:  lambda: Coord(pos.x - 1, pos.y),
-			WumpusWorld.UP:    lambda: Coord(pos.x, pos.y + 1),
-			WumpusWorld.DOWN:  lambda: Coord(pos.x, pos.y - 1)
-		}[direction]()
+	def perceive(self, pos, room=None, others=[]):
+		print('Percepts: ' + str(others))
 
-		return next_pos if self._is_valid(next_pos) else None
-
-	def _adjacent(self, coord):
-		for direction in WumpusWorld.directions:
-			next_pos = self._next_pos(coord, direction)
-			if next_pos is not None:
-				yield next_pos
-	# ... TO HERE IS VERY SIMILAR TO SOME CODE IN WumpusWorld!
-
-	def perceive(self, pos, percepts):
-		print('Percepts: ' + str(percepts))
-
-		if WumpusWorld.BUMP in percepts:
-			if self.direction == WumpusWorld.LEFT or \
-			   self.direction == WumpusWorld.RIGHT:
-				self.bounds[self.direction] = pos.x
-			else:
-				self.bounds[self.direction] = pos.y
-
-			percepts.remove(WumpusWorld.BUMP)
+		if WumpusWorld.BUMP in others:
+			self.map.infer_extreme(pos, self.direction)
 
 			# Our current strategy obviously isn't
 			# going to work
 			self.current_plan = None
 
-		if WumpusWorld.SCREAM in percepts:
+		if WumpusWorld.SCREAM in others:
 			self.wumpus_alive = False
-			percepts.remove(WumpusWorld.SCREAM)
 
-		self.rooms[pos] |= set(percepts)
+		if room:
+			print('Room: ' + str(room))
+			self.map.add_knowledge(pos, **room._asdict())
+
 		self.pos = pos
 
-	def start(self, goal, golds, direction):
-		self._reset()
-
-		self.direction = direction
-		self.goal = goal
-		self.wumpus_alive = True
-		self.gold_count = golds
-
-	def _get_border_rooms(self):
-		rooms = frozenset()
-
-		for coord in self.rooms.keys():
-			rooms = rooms | frozenset(adj for adj in self._adjacent(coord)
-			                              if adj not in self.rooms)
-
-		return rooms
-
-	def _safe(self, coord, thing):
-		percept = {
-			'wumpus': WumpusWorld.STENCH,
-			'pit': WumpusWorld.BREEZE
-		}[thing]
-
-		return coord in self.rooms or \
-		       any(adj in self.rooms and percept not in self.rooms[adj]
-		           for adj in self._adjacent(coord))
-
-	def _unsafe_adjacent(self, coord, thing):
-		for adj in self._adjacent(coord):
-			if not self._safe(adj, thing):
-				yield adj
-
 	def _detect_wumpus(self):
-		stenches = (coord for coord, percepts in self.rooms.items()
-		                  if WumpusWorld.STENCH in percepts)
+		stenches = (coord for coord, room in self.map.rooms.items()
+		                  if room.stench)
 
 		models = None
 
 		for coord in stenches:
-			potential_models = frozenset(frozenset([adj]) for adj in self._unsafe_adjacent(coord, 'wumpus'))
+			potential_models = {frozenset([adj]) for adj in self.map.unsafe_adjacent(coord, ['wumpus'])}
 
 			if models is None:
 				models = potential_models
 			else:
 				product = itertools.product(models, potential_models)
-				models = frozenset(first & second for first, second in product)
-				models -= frozenset()
+				models = {first & second for first, second in product}
+				models -= {frozenset()}
 
 		if models is None:
-			models = frozenset([frozenset()])
+			models = {frozenset()}
 
 		return models
 
 	def _detect_pits(self):
-		breezes = (coord for coord, percepts in self.rooms.items()
-		                 if WumpusWorld.BREEZE in percepts)
+		breezes = (coord for coord, room in self.map.rooms.items()
+		                 if room.breeze)
 
 		models = None
 
 		for coord in breezes:
-			potential_models = frozenset(frozenset(coords) for coords in powerset_no_empty(self._unsafe_adjacent(coord, 'pit')))
+			potential_models = {frozenset(coords) for coords in powerset_no_empty(self.map.unsafe_adjacent(coord, ['pit']))}
 
 			if models is None:
 				models = potential_models
 			else:
 				product = itertools.product(models, potential_models)
-				models = frozenset(first | second for first, second in product)
-				models -= frozenset()
+				models = {first | second for first, second in product}
+				models -= {frozenset()}
 
 		if models is None:
-			models = frozenset([frozenset()])
+			models = {frozenset()}
 
 		return models
 
 	def _next_states(self, state, dest):
-		for direction in WumpusWorld.directions:
-			next_state = self._next_pos(state, direction)
-			if next_state in self.rooms or next_state == dest:
+		for direction in WumpusWorldMap.directions:
+			next_state = self.map.next_pos(state, direction)
+			if next_state is None:
+				continue
+
+			if self.map.safe(next_state, ['pit', 'wumpus']) or next_state == dest:
 				yield next_state, direction
 
 	def _plan_movement(self, dest):
 		return plan_movement(self.pos, dest, self._next_states)
 
+	def _detect_definites(self, models, thing):
+		definites = reduce(lambda a, b: a & b, models)
+
+		for definite in definites:
+			self.map.add_knowledge(definite, **{thing: True})
+
 	def _explore(self):
 		def dist(coord):
 			return math.sqrt((coord.x - self.pos.x)**2 + (coord.y - self.pos.y)**2)
 
-		borders = sorted(self._get_border_rooms(), key=dist)
 		wumpuses = self._detect_wumpus()
+		self._detect_definites(wumpuses, 'wumpus')
+
 		pits = self._detect_pits()
+		self._detect_definites(pits, 'pit')
 
 		for wumpus_model, pit_model in itertools.product(wumpuses, pits):
 			print('wumpus: ' + str(wumpus_model))
 			print('pit: ' + str(pit_model))
-			self._visualize_knowledge(wumpus_model, pit_model);
+			self.map.visualize_knowledge({
+				'W': wumpus_model,
+				'P': pit_model,
+				'GO': [self.goal],
+				'A': [self.pos]
+			})
+
 			print()
 
+		borders = sorted(self.map.get_border_rooms(), key=dist)
 		print('border rooms: ' + str(borders))
 
 		for room in borders:
@@ -505,89 +644,11 @@ class WumpusWorldAgent:
 		self.current_plan = self._plan_movement(self.goal)
 		self.current_plan.append(WumpusWorld.CLIMB)
 
-
-	def _room_string(self, coord, wumpus_model, pit_model):
-		things = []
-
-		if coord == self.goal:
-			things.append('GO')
-
-		if coord in self.rooms:
-			percept_thing_map = {
-				WumpusWorld.BREEZE: 'B',
-				WumpusWorld.STENCH: 'S',
-				WumpusWorld.GLITTER: 'G'
-			}
-
-			for p in self.rooms[coord]:
-				things.append(percept_thing_map[p])
-
-			things.append('E')
-
-		if coord in wumpus_model:
-			things.append('W')
-
-		if coord in pit_model:
-			things.append('P')
-
-		if coord == self.pos:
-			things.append('A')
-
-		return ','.join(things)
-
-	def _visualize_knowledge(self, wumpus_model, pit_model):
-		known_coords = set(self.rooms.keys()) | \
-		               wumpus_model | \
-		               pit_model | \
-		               {self.goal}
-
-		def extreme(direction, fallback_op, fallback_attr):
-			if self.bounds[direction] is not None:
-				return self.bounds[direction]
-			else:
-				return fallback_op(getattr(coord, fallback_attr) for coord in known_coords)
-
-		lowest_x = extreme(WumpusWorld.LEFT, min, 'x')
-		highest_x = extreme(WumpusWorld.RIGHT, max, 'x')
-
-		lowest_y = extreme(WumpusWorld.DOWN, min, 'y')
-		highest_y = extreme(WumpusWorld.UP, max, 'y')
-
-		pre_space = 3 if self.bounds[WumpusWorld.LEFT] is None else 0
-		post_dots = 3 if self.bounds[WumpusWorld.RIGHT] is None else 0
-
-		grid = [[self._room_string(Coord(x, y), wumpus_model, pit_model) for y in range(lowest_y, highest_y+1)]
-		        for x in range(lowest_x, highest_x+1)]
-
-		column_widths = [max(max(len(s), 3) for s in column) for column in grid]
-		column_dashes = ['-' * width for width in column_widths]
-
-		dots_line = '.'.join(' ' * num for num in [pre_space] + column_widths) + '.'
-		pre_dots = '.' * pre_space
-		post_dots = '.' * post_dots
-
-		between_line = '+'.join([pre_dots] + column_dashes + [post_dots])
-
-		def dots():
-			for _ in range(3): print(dots_line)
-
-		if self.bounds[WumpusWorld.DOWN] is None:
-			dots()
-
-		for x, colnum in enumerate(range(lowest_y, highest_y+1)):
-			print(between_line)
-			print(' ' * pre_space + '|' + '|'.join(col[x].ljust(column_widths[y]) for y, col in enumerate(grid)) + '|')
-
-		print(between_line)
-
-		if self.bounds[WumpusWorld.UP] is None:
-			dots()
-
 	def get_action(self):
-		room = self.rooms[self.pos]
+		room = self.map.rooms[self.pos]
 
-		if 'glitter' in room:
-			room.remove('glitter')
+		if room.gold:
+			self.map.add_knowledge(self.pos, gold=False)
 			self.gold_count -= 1
 			return WumpusWorld.GRAB
 
@@ -599,7 +660,7 @@ class WumpusWorldAgent:
 				self._explore()
 
 		action = self.current_plan[0]
-		if action in WumpusWorld.directions:
+		if action in WumpusWorldMap.directions:
 			if self.direction != action:
 				self.direction = action
 				return action
