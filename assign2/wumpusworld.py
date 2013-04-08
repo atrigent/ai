@@ -260,18 +260,17 @@ class WumpusWorldMap:
 			'gold': ('G', (45, 30))
 		}
 
-		for f in room._fields:
-			if f in field_sym_map:
-				sym, colors = field_sym_map[f]
-				val = getattr(room, f)
+		for f in field_sym_map:
+			sym, colors = field_sym_map[f]
+			val = getattr(room, f) if hasattr(room, f) else None
 
-				if val is False:
-					sym = '!' + sym
-				elif val is True:
-					sym = color(sym, colors)
+			if val is False:
+				sym = '!' + sym
+			elif val is True:
+				sym = color(sym, colors)
 
-				if val is not None:
-					things.append(sym)
+			if val is not None:
+				things.append(sym)
 
 		return ','.join(things)
 
