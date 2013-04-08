@@ -524,6 +524,7 @@ class WumpusWorldAgent:
 		self.screams = None
 		self.gold_count = None
 		self.map = None
+		self.detectable_models = None
 
 		self._reset()
 
@@ -533,6 +534,7 @@ class WumpusWorldAgent:
 		self.screams = 0
 		self.gold_count = golds
 		self.map = WumpusWorldMap()
+		self.detectable_models = {}
 
 		self._reset()
 
@@ -588,6 +590,22 @@ class WumpusWorldAgent:
 				for adj in self.map.adjacent(coord):
 					self._add_knowledge(adj, **{detectable: False})
 
+			if detectable in changed or info.percept in changed:
+				models = self._detect_definites(self._detect(detectable), detectable)
+
+				if self.detectable_models.get(detectable, None) != models:
+					self.detectable_models[detectable] = models
+
+					print(detectable + ': ' + str(models))
+					for model in models:
+						self.map.visualize_knowledge(self.field_sym_map, {
+							detectable: model,
+							'agent': [self.pos],
+							'goal': [self.goal]
+						})
+
+						print()
+
 	def _detect(self, thing):
 		percept, limit = self.detectables[thing]
 
@@ -636,29 +654,12 @@ class WumpusWorldAgent:
 		def dist(coord):
 			return math.sqrt((coord.x - self.pos.x)**2 + (coord.y - self.pos.y)**2)
 
-		detectable_models = {}
-		for detectable in self.detectables:
-			models = self._detect_definites(self._detect(detectable), detectable)
-
-			if detectable_models.get(detectable, None) != models:
-				detectable_models[detectable] = models
-
-				print(detectable + ': ' + str(models))
-				for model in models:
-					self.map.visualize_knowledge(self.field_sym_map, {
-						detectable: model,
-						'agent': [self.pos],
-						'goal': [self.goal]
-					})
-
-					print()
-
 		borders = sorted(self.map.get_border_rooms(), key=dist)
 		print('border rooms: ' + str(borders))
 
 		for room in borders:
 			# skip over rooms that might be unsafe
-			if any(room in model for models in detectable_models.values()
+			if any(room in model for models in self.detectable_models.values()
 			                     for model in models) or \
 			   not self.map.all_vals(room, self.detectables.keys(), False):
 				continue
