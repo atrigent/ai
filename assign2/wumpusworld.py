@@ -6,6 +6,43 @@ import heapq
 import math
 import re
 
+# A modified version of the standard defaultdict which assumes
+# that the data being stored in the dict will be immutable.
+# We can make some extra assumptions - for example, we do not need
+# a factory for the default values, only a value. Also, when
+# getting a default value, we do not have to add it to the dict
+# just yet.
+class immutabledefaultdict(dict):
+	def __init__(self, default_val=None, *a, **kw):
+		dict.__init__(self, *a, **kw)
+		self.default_val = default_val
+	def __getitem__(self, key):
+		try:
+			return dict.__getitem__(self, key)
+		except KeyError:
+			return self.__missing__(key)
+	def __missing__(self, key):
+		if self.default_val is None:
+			raise KeyError(key)
+		return self.default_val
+	def __reduce__(self):
+		if self.default_val is None:
+			args = tuple()
+		else:
+			args = self.default_val,
+		return type(self), args, None, None, self.items()
+	def copy(self):
+		return self.__copy__()
+	def __copy__(self):
+		return type(self)(self.default_val, self)
+	def __deepcopy__(self, memo):
+		import copy
+		return type(self)(self.default_val,
+				copy.deepcopy(self.items()))
+		def __repr__(self):
+			return 'defaultdict(%s, %s)' % (self.default_val,
+					dict.__repr__(self))
+
 def color(stuff, cnums):
 	return '\x1b[{0}m{1}\x1b[m'.format(';'.join(str(cnum) for cnum in cnums), stuff)
 
@@ -121,7 +158,8 @@ class WumpusWorldMap:
 	}
 
 	def __init__(self):
-		self.rooms = {}
+		self.rooms = immutabledefaultdict(self.WumpusWorldRoom(False, None, None,
+		                                                       None, None, None))
 		self.bounds = {direction: None for direction in self.directions}
 
 	def _on_board_axis(self, coord, axis, low=None, high=None):
@@ -179,18 +217,13 @@ class WumpusWorldMap:
 		if not self.on_board(coord):
 			raise RuntimeError()
 
-		if coord in self.rooms:
-			room = self.rooms[coord]
-		else:
-			room = self.WumpusWorldRoom(False, None, None, None, None, None)
-
-		room = room._replace(**kwargs)
+		room = self.rooms[coord]._replace(**kwargs)
 		self.rooms[coord] = room
 
 		for thing, percept in self.thing_percept_map.items():
 			if getattr(room, percept) is False:
 				for adj in self.adjacent(coord):
-					if adj not in self.rooms or getattr(self.rooms[adj], thing) is not False:
+					if getattr(self.rooms[adj], thing) is not False:
 						self.add_knowledge(adj, **{thing: False})
 
 	def get_border_rooms(self):
@@ -199,8 +232,7 @@ class WumpusWorldMap:
 		for coord, room in self.rooms.items():
 			if room.explored:
 				rooms |= {adj for adj in self.adjacent(coord)
-				              if adj not in self.rooms or
-				                 not self.rooms[adj].explored}
+				              if not self.rooms[adj].explored}
 
 		return rooms
 
@@ -208,8 +240,7 @@ class WumpusWorldMap:
 		percepts = [self.thing_percept_map[thing] for thing in things]
 
 		def does_not_contain(coord, whatevers):
-			return coord in self.rooms and \
-			       all(getattr(self.rooms[coord], whatever) is False
+			return all(getattr(self.rooms[coord], whatever) is False
 			           for whatever in whatevers)
 
 		return does_not_contain(coord, things) or \
@@ -227,30 +258,29 @@ class WumpusWorldMap:
 			if coord in v:
 				things.append(k)
 
-		if coord in self.rooms:
-			room = self.rooms[coord]
+		room = self.rooms[coord]
 
-			field_sym_map = {
-				'explored': ('E', ()),
-				'pit': ('P', (47, 30)),
-				'breeze': ('B', (47, 30)),
-				'stench': ('S', (41, 30)),
-				'wumpus': ('W', (41, 30)),
-				'gold': ('G', (45, 30))
-			}
+		field_sym_map = {
+			'explored': ('E', ()),
+			'pit': ('P', (47, 30)),
+			'breeze': ('B', (47, 30)),
+			'stench': ('S', (41, 30)),
+			'wumpus': ('W', (41, 30)),
+			'gold': ('G', (45, 30))
+		}
 
-			for f in room._fields:
-				if f in field_sym_map:
-					sym, colors = field_sym_map[f]
-					val = getattr(room, f)
+		for f in room._fields:
+			if f in field_sym_map:
+				sym, colors = field_sym_map[f]
+				val = getattr(room, f)
 
-					if val is False:
-						sym = '!' + sym
-					elif val is True:
-						sym = color(sym, colors)
+				if val is False:
+					sym = '!' + sym
+				elif val is True:
+					sym = color(sym, colors)
 
-					if val is not None:
-						things.append(sym)
+				if val is not None:
+					things.append(sym)
 
 		return ','.join(things)
 
