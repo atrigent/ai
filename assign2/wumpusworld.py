@@ -245,15 +245,17 @@ class WumpusWorldMap:
 	def _room_string(self, coord, field_sym_map, extras):
 		things = []
 
-		for k, v in extras.items():
-			if coord in v:
-				things.append(k)
-
 		room = self.rooms[coord]
 
 		for f in field_sym_map:
 			sym, colors = field_sym_map[f]
 			val = getattr(room, f) if hasattr(room, f) else None
+
+			if f in extras and coord in extras[f]:
+				if val is False:
+					raise RuntimeError()
+
+				val = True
 
 			if val is False:
 				sym = '!' + sym
@@ -561,7 +563,9 @@ class WumpusWorldAgent:
 		'breeze': ('B', (47, 30)),
 		'stench': ('S', (41, 30)),
 		'wumpus': ('W', (41, 30)),
-		'gold': ('G', (45, 30))
+		'gold': ('G', (45, 30)),
+		'goal': ('GO', ()),
+		'agent': ('A', ())
 	}
 
 	def _add_knowledge(self, coord, **kwargs):
@@ -629,10 +633,10 @@ class WumpusWorldAgent:
 			print('wumpus: ' + str(wumpus_model))
 			print('pit: ' + str(pit_model))
 			self.map.visualize_knowledge(self.field_sym_map, {
-				'W': wumpus_model,
-				'P': pit_model,
-				'GO': [self.goal],
-				'A': [self.pos]
+				'wumpus': wumpus_model,
+				'pit': pit_model,
+				'goal': [self.goal],
+				'agent': [self.pos]
 			})
 
 			print()
