@@ -580,6 +580,10 @@ class WumpusWorldAgent:
 			print('New knowledge at {0}: {1}'.format(coord, changed))
 
 		for detectable, info in self.detectables.items():
+			if detectable in changed and changed[detectable] is True:
+				for adj in self.map.adjacent(coord):
+					self._add_knowledge(adj, **{info.percept: True})
+
 			if info.percept in changed and changed[info.percept] is False:
 				for adj in self.map.adjacent(coord):
 					self._add_knowledge(adj, **{detectable: False})
