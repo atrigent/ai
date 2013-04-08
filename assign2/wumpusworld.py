@@ -618,7 +618,7 @@ class WumpusWorldAgent:
 
 		for definite in definites:
 			print('Deduced {0} at {1}'.format(thing, definite))
-			self.map.add_knowledge(definite, **{thing: True})
+			self._add_knowledge(definite, **{thing: True})
 
 		return {model - definites for model in models}
 
