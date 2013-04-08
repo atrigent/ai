@@ -532,6 +532,8 @@ class WumpusWorldAgent:
 		self._reset()
 
 	def perceive(self, pos, room=None, others=[]):
+		self.pos = pos
+
 		print('Percepts: ' + str(others))
 
 		if WumpusWorld.BUMP in others:
@@ -547,8 +549,6 @@ class WumpusWorldAgent:
 		if room:
 			print('Room: ' + str(room))
 			self._add_knowledge(pos, **room._asdict())
-
-		self.pos = pos
 
 	DetectableInfo = namedtuple('DetectableInfo', 'percept limit')
 
