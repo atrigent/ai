@@ -212,7 +212,12 @@ class WumpusWorldMap:
 		if not self.on_board(coord):
 			raise RuntimeError()
 
-		self.rooms[coord] = self.rooms[coord]._replace(**kwargs)
+		changed = {key: val for key, val in kwargs.items()
+		                    if getattr(self.rooms[coord], key) != val}
+
+		self.rooms[coord] = self.rooms[coord]._replace(**changed)
+
+		return changed
 
 	def get_border_rooms(self):
 		rooms = set()
@@ -569,13 +574,12 @@ class WumpusWorldAgent:
 	}
 
 	def _add_knowledge(self, coord, **kwargs):
-		self.map.add_knowledge(coord, **kwargs)
+		changed = self.map.add_knowledge(coord, **kwargs)
 
 		for detectable, info in self.detectables.items():
-			if info.percept in kwargs and kwargs[info.percept] is False:
+			if info.percept in changed and changed[info.percept] is False:
 				for adj in self.map.adjacent(coord):
-					if getattr(self.map.rooms[adj], detectable) is not False:
-						self._add_knowledge(adj, **{detectable: False})
+					self._add_knowledge(adj, **{detectable: False})
 
 	def _detect(self, thing):
 		percept, limit = self.detectables[thing]
