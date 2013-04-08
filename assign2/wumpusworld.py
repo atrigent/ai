@@ -242,7 +242,7 @@ class WumpusWorldMap:
 		return (adj for adj in self.adjacent(coord)
 		            if not self.any_vals(adj, things, val))
 
-	def _room_string(self, coord, extras):
+	def _room_string(self, coord, field_sym_map, extras):
 		things = []
 
 		for k, v in extras.items():
@@ -250,15 +250,6 @@ class WumpusWorldMap:
 				things.append(k)
 
 		room = self.rooms[coord]
-
-		field_sym_map = {
-			'explored': ('E', ()),
-			'pit': ('P', (47, 30)),
-			'breeze': ('B', (47, 30)),
-			'stench': ('S', (41, 30)),
-			'wumpus': ('W', (41, 30)),
-			'gold': ('G', (45, 30))
-		}
 
 		for f in field_sym_map:
 			sym, colors = field_sym_map[f]
@@ -299,7 +290,7 @@ class WumpusWorldMap:
 		else:
 			return s
 
-	def visualize_knowledge(self, extras):
+	def visualize_knowledge(self, field_sym_map, extras):
 		known_coords = set(self.rooms.keys()).union(*extras.values())
 
 		def extreme(extreme, axis):
@@ -325,7 +316,7 @@ class WumpusWorldMap:
 		pre = num_dots if self.bounds['west'] is None else 0
 		post = num_dots if self.bounds['east'] is None else 0
 
-		grid = [[self._room_string(Coord(x, y), extras)
+		grid = [[self._room_string(Coord(x, y), field_sym_map, extras)
 		         for y in range(lowest_y, highest_y)]
 		        for x in range(lowest_x, highest_x)]
 
@@ -564,6 +555,15 @@ class WumpusWorldAgent:
 		'pit': DetectableInfo('breeze', float('inf'))
 	}
 
+	field_sym_map = {
+		'explored': ('E', ()),
+		'pit': ('P', (47, 30)),
+		'breeze': ('B', (47, 30)),
+		'stench': ('S', (41, 30)),
+		'wumpus': ('W', (41, 30)),
+		'gold': ('G', (45, 30))
+	}
+
 	def _add_knowledge(self, coord, **kwargs):
 		self.map.add_knowledge(coord, **kwargs)
 
@@ -628,7 +628,7 @@ class WumpusWorldAgent:
 		for wumpus_model, pit_model in itertools.product(wumpuses, pits):
 			print('wumpus: ' + str(wumpus_model))
 			print('pit: ' + str(pit_model))
-			self.map.visualize_knowledge({
+			self.map.visualize_knowledge(self.field_sym_map, {
 				'W': wumpus_model,
 				'P': pit_model,
 				'GO': [self.goal],
