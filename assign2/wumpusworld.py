@@ -539,7 +539,8 @@ class WumpusWorldAgent:
 	def perceive(self, pos, room=None, others=[]):
 		self.pos = pos
 
-		print('Percepts: ' + str(others))
+		if others:
+			print('Percepts: ' + str(others))
 
 		if WumpusWorld.BUMP in others:
 			self.map.set_extreme_at(pos, self.direction)
@@ -552,7 +553,6 @@ class WumpusWorldAgent:
 			self.screams += 1
 
 		if room:
-			print('Room: ' + str(room))
 			self._add_knowledge(pos, **room._asdict())
 
 	DetectableInfo = namedtuple('DetectableInfo', 'percept limit')
@@ -575,6 +575,9 @@ class WumpusWorldAgent:
 
 	def _add_knowledge(self, coord, **kwargs):
 		changed = self.map.add_knowledge(coord, **kwargs)
+
+		if changed:
+			print('New knowledge at {0}: {1}'.format(coord, changed))
 
 		for detectable, info in self.detectables.items():
 			if info.percept in changed and changed[info.percept] is False:
@@ -621,7 +624,6 @@ class WumpusWorldAgent:
 		definites = reduce(lambda a, b: a & b, models)
 
 		for definite in definites:
-			print('Deduced {0} at {1}'.format(thing, definite))
 			self._add_knowledge(definite, **{thing: True})
 
 		return {model - definites for model in models}
