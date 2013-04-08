@@ -152,11 +152,6 @@ class WumpusWorldMap:
 		directions[low] = DirInfo('low', axis)
 		directions[high] = DirInfo('high', axis)
 
-	thing_percept_map = {
-		'wumpus': 'stench',
-		'pit': 'breeze'
-	}
-
 	def __init__(self):
 		self.rooms = immutabledefaultdict(self.WumpusWorldRoom(False, None, None,
 		                                                       None, None, None))
@@ -217,14 +212,7 @@ class WumpusWorldMap:
 		if not self.on_board(coord):
 			raise RuntimeError()
 
-		room = self.rooms[coord]._replace(**kwargs)
-		self.rooms[coord] = room
-
-		for thing, percept in self.thing_percept_map.items():
-			if getattr(room, percept) is False:
-				for adj in self.adjacent(coord):
-					if getattr(self.rooms[adj], thing) is not False:
-						self.add_knowledge(adj, **{thing: False})
+		self.rooms[coord] = self.rooms[coord]._replace(**kwargs)
 
 	def get_border_rooms(self):
 		rooms = set()
@@ -566,7 +554,7 @@ class WumpusWorldAgent:
 
 		if room:
 			print('Room: ' + str(room))
-			self.map.add_knowledge(pos, **room._asdict())
+			self._add_knowledge(pos, **room._asdict())
 
 		self.pos = pos
 
@@ -576,6 +564,15 @@ class WumpusWorldAgent:
 		'wumpus': DetectableInfo('stench', 1),
 		'pit': DetectableInfo('breeze', float('inf'))
 	}
+
+	def _add_knowledge(self, coord, **kwargs):
+		self.map.add_knowledge(coord, **kwargs)
+
+		for detectable, info in self.detectables.items():
+			if info.percept in kwargs and kwargs[info.percept] is False:
+				for adj in self.map.adjacent(coord):
+					if getattr(self.map.rooms[adj], detectable) is not False:
+						self._add_knowledge(adj, **{detectable: False})
 
 	def _detect(self, thing):
 		percept, limit = self.detectables[thing]
@@ -670,7 +667,7 @@ class WumpusWorldAgent:
 		room = self.map.rooms[self.pos]
 
 		if room.gold:
-			self.map.add_knowledge(self.pos, gold=False)
+			self._add_knowledge(self.pos, gold=False)
 			self.gold_count -= 1
 			return WumpusWorld.GRAB
 
